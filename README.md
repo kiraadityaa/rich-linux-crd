@@ -32,6 +32,8 @@ Image sources: workflow status badges from GitHub Actions, technology badges fro
 | Session length | Automatic keep-alive per workflow run (up to 6 hours) |
 | Crash-resistant session | Direct `exec` without `Xsession`/`lightdm` wrappers + Mesa software rendering (fixes the "Oh no! Something has gone wrong" screen) |
 | Disconnect-safe upgrades | Full `upgrade` at build time + [`safe-upgrade`](scripts/safe-upgrade.sh) helper inside the session (holds CRD/desktop/systemd packages) |
+| Quiet installs | Needrestart apt hook disabled (`/etc/apt/apt.conf.d/20needrestart` removed) → no "Scanning processes..." output and no auto service restarts during any install/upgrade |
+| Wallpaper included | Catppuccin **Black Unicat** preinstalled for the `runner` user on both desktops |
 | Desktop shortcuts | Antigravity, VS Code, Files, Terminal, OpenCode, Safe Upgrade |
 
 ---
@@ -85,6 +87,7 @@ flowchart LR
 | CRD session | `exec /usr/bin/cinnamon-session --session cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /usr/bin/gnome-session --session=ubuntu` + `LIBGL_ALWAYS_SOFTWARE=1` |
 | Display manager | Not used (headless) | Not used (headless) |
 | Screensaver, lock, suspend | Disabled (autostart + dconf no-lock, packages kept installed) | Disabled (dconf + gsettings no-lock, suspend set to `nothing`) |
+| Wallpaper | Catppuccin Black Unicat (via `org.cinnamon.desktop.background`) | Catppuccin Black Unicat (via `org.gnome.desktop.background`) |
 | Upgrades | Build-time full upgrade + `safe-upgrade` in session | Build-time full upgrade + `safe-upgrade` in session |
 | Best for | Mint-style look, lighter footprint | Maximum stability |
 
@@ -168,7 +171,8 @@ rich-linux-crd/
 |---|---|
 | Change PIN | Create a `CRD_PIN` repository secret (Settings → Secrets → Actions), 6+ digits |
 | Change the `runner` user password | Edit the `echo "runner:...` line in the workflow |
-| Add applications | Add a new `apt-get install` step before the CRD step |
+| Add applications | Add a new `apt-get install` step before the CRD step (needrestart is already disabled, so it stays quiet) |
+| Change the wallpaper | Edit the download URL in the **Set Wallpaper** step of the workflow |
 | Extend duration | Edit `sleep 21600` in the **Keep Alive** step (max 6 hours due to the Actions limit) |
 
 ---

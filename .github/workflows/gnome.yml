@@ -33,6 +33,11 @@ jobs:
           echo -e "${C_YELLOW}[INFO] Updating package lists...${C_NC}"
           sudo apt-get update
 
+          echo -e "${C_YELLOW}[INFO] Disabling needrestart interactive restarts (anti-stuck)...${C_NC}"
+          sudo mkdir -p /etc/needrestart/needrestart.conf.d
+          echo '$nrconf{restart} = '"'"'l'"'"';' | sudo tee /etc/needrestart/needrestart.conf.d/99-no-restart.conf > /dev/null
+          echo '$nrconf{kernelhints} = 0;' | sudo tee -a /etc/needrestart/needrestart.conf.d/99-no-restart.conf > /dev/null
+
           echo -e "${C_YELLOW}[INFO] Removing unnecessary packages...${C_NC}"
           sudo apt-get remove -y --purge \
             man-db \
@@ -58,6 +63,9 @@ jobs:
       - name: Install GNOME Desktop
         run: |
           C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
+          export DEBIAN_FRONTEND=noninteractive
+          export NEEDRESTART_MODE=l
+          export NEEDRESTART_SUSPEND=1
 
           echo ""
           echo "------------------------------------------------------------"
@@ -65,7 +73,10 @@ jobs:
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Installing full GNOME desktop (approx 2GB, please wait)...${C_NC}"
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+          sudo NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            -o Dpkg::Options::="--force-confdef" \
+            -o Dpkg::Options::="--force-confold" \
+            -o Dpkg::Use-Pty=0 \
             ubuntu-desktop \
             ubuntu-desktop-minimal \
             gnome-shell \
@@ -137,7 +148,7 @@ jobs:
             -O /tmp/google-chrome.deb
 
           echo -e "${C_YELLOW}[INFO] Installing .deb package...${C_NC}"
-          sudo apt-get install -y /tmp/google-chrome.deb
+          sudo NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Use-Pty=0 /tmp/google-chrome.deb
 
           rm -f /tmp/google-chrome.deb
 
@@ -168,7 +179,7 @@ jobs:
           sudo apt-get update
 
           echo -e "${C_YELLOW}[INFO] Installing VS Code...${C_NC}"
-          sudo apt-get install -y code
+          sudo NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Use-Pty=0 code
 
           echo -e "${C_GREEN}[OK] VS Code installed: $(code --version | head -n 1)${C_NC}"
 
@@ -187,7 +198,7 @@ jobs:
 
           sudo apt-get update
 
-          sudo apt-get install -y curl
+          sudo apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Use-Pty=0 curl
 
           # NOTE: installer opencode.ai/install mengabaikan
           # OPENCODE_INSTALL_DIR dan selalu install ke $HOME/.opencode/bin.
@@ -224,7 +235,7 @@ jobs:
             -O /tmp/opencode-desktop.deb
 
           echo -e "${C_YELLOW}[INFO] Installing .deb package...${C_NC}"
-          sudo apt-get install -y /tmp/opencode-desktop.deb
+          sudo NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" -o Dpkg::Use-Pty=0 /tmp/opencode-desktop.deb
 
           rm -f /tmp/opencode-desktop.deb
 
@@ -262,7 +273,10 @@ jobs:
           sudo apt-get update
 
           echo -e "${C_YELLOW}[INFO] Installing chrome-remote-desktop...${C_NC}"
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+          sudo NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            -o Dpkg::Options::="--force-confdef" \
+            -o Dpkg::Options::="--force-confold" \
+            -o Dpkg::Use-Pty=0 \
             chrome-remote-desktop
 
           echo -e "${C_GREEN}[OK] Chrome Remote Desktop installed.${C_NC}"

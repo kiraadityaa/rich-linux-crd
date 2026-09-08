@@ -43,6 +43,9 @@ jobs:
 
           sudo apt-get autoremove -y || true
 
+          echo -e "${C_YELLOW}[INFO] Configuring needrestart to never auto-restart services...${C_NC}"
+          echo '$nrconf{restart} = "l";' | sudo tee /etc/needrestart/needrestart.conf > /dev/null
+
           echo -e "${C_GREEN}[OK] System prepared.${C_NC}"
 
 
@@ -115,6 +118,9 @@ jobs:
           echo "runner:Antigravity2026!" | sudo chpasswd
 
           sudo usermod -aG sudo runner
+
+          echo -e "${C_YELLOW}[INFO] Setting NEEDRESTART_MODE=l for runner (prevents service restart during apt)...${C_NC}"
+          echo 'export NEEDRESTART_MODE=l' | sudo tee -a /home/runner/.bashrc > /dev/null
 
           sudo mkdir -p /home/runner/Desktop
 
@@ -311,6 +317,7 @@ jobs:
           echo -e "${C_YELLOW}[INFO] Writing .chrome-remote-desktop-session (direct absolute-path exec)...${C_NC}"
           sudo -u runner tee /home/runner/.chrome-remote-desktop-session > /dev/null <<EOF
           export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+          export NEEDRESTART_MODE=l
           DESKTOP_SESSION=cinnamon
           XDG_CURRENT_DESKTOP=X-Cinnamon
           XDG_SESSION_TYPE=x11

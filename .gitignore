@@ -13,3 +13,6 @@ Thumbs.db
 *.tmp
 *.bak
 /tmp/
+
+# Local opencode configuration (may contain API keys)
+.opencode/

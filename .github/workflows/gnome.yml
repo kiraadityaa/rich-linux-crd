@@ -27,16 +27,20 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 01/16] PREPARE SYSTEM${C_NC}"
+          echo -e "${C_CYAN}[STEP 01/17] PREPARE SYSTEM${C_NC}"
           echo "------------------------------------------------------------"
+
+          echo -e "${C_YELLOW}[INFO] Disabling needrestart entirely (no noisy logs, no auto-restart)...${C_NC}"
+          # Matikan apt hook needrestart SEBELUM operasi apt apa pun, supaya
+          # setiap install/upgrade tidak menampilkan 'Scanning processes...'
+          # dan tidak mencoba me-restart service (yang bisa memutus sesi CRD).
+          sudo rm -f /etc/apt/apt.conf.d/20needrestart || true
+          sudo mkdir -p /etc/needrestart/needrestart.conf.d || true
+          echo '$nrconf{restart} = '"'"'l'"'"';' | sudo tee /etc/needrestart/needrestart.conf.d/99-no-restart.conf > /dev/null
+          echo '$nrconf{kernelhints} = 0;' | sudo tee -a /etc/needrestart/needrestart.conf.d/99-no-restart.conf > /dev/null
 
           echo -e "${C_YELLOW}[INFO] Updating package lists...${C_NC}"
           sudo apt-get update
-
-          echo -e "${C_YELLOW}[INFO] Disabling needrestart interactive restarts (anti-stuck)...${C_NC}"
-          sudo mkdir -p /etc/needrestart/needrestart.conf.d
-          echo '$nrconf{restart} = '"'"'l'"'"';' | sudo tee /etc/needrestart/needrestart.conf.d/99-no-restart.conf > /dev/null
-          echo '$nrconf{kernelhints} = 0;' | sudo tee -a /etc/needrestart/needrestart.conf.d/99-no-restart.conf > /dev/null
 
           echo -e "${C_YELLOW}[INFO] Removing unnecessary packages...${C_NC}"
           sudo apt-get remove -y --purge \
@@ -54,9 +58,6 @@ jobs:
           echo -e "${C_YELLOW}[INFO] Full upgrade at build-time...${C_NC}"
           sudo NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 
-          echo -e "${C_YELLOW}[INFO] Configuring needrestart to never auto-restart services...${C_NC}"
-          echo '$nrconf{restart} = "l";' | sudo tee /etc/needrestart/needrestart.conf > /dev/null
-
           echo -e "${C_GREEN}[OK] System prepared.${C_NC}"
 
 
@@ -72,7 +73,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 02/16] INSTALL GNOME DESKTOP${C_NC}"
+          echo -e "${C_CYAN}[STEP 02/17] INSTALL GNOME DESKTOP${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Installing full GNOME desktop (approx 2GB, please wait)...${C_NC}"
@@ -113,7 +114,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 03/16] SETUP REMOTE USER${C_NC}"
+          echo -e "${C_CYAN}[STEP 03/17] SETUP REMOTE USER${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Creating user 'runner'...${C_NC}"
@@ -145,7 +146,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 04/16] INSTALL GOOGLE CHROME${C_NC}"
+          echo -e "${C_CYAN}[STEP 04/17] INSTALL GOOGLE CHROME${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Downloading Google Chrome stable...${C_NC}"
@@ -170,7 +171,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 05/16] INSTALL VS CODE${C_NC}"
+          echo -e "${C_CYAN}[STEP 05/17] INSTALL VS CODE${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Adding Microsoft repository...${C_NC}"
@@ -199,7 +200,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 06/16] INSTALL OPENCODE CLI${C_NC}"
+          echo -e "${C_CYAN}[STEP 06/17] INSTALL OPENCODE CLI${C_NC}"
           echo "------------------------------------------------------------"
 
           sudo apt-get update
@@ -233,7 +234,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 07/16] INSTALL OPENCODE DESKTOP${C_NC}"
+          echo -e "${C_CYAN}[STEP 07/17] INSTALL OPENCODE DESKTOP${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Downloading OpenCode Desktop (.deb latest)...${C_NC}"
@@ -263,7 +264,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 08/16] INSTALL CHROME REMOTE DESKTOP${C_NC}"
+          echo -e "${C_CYAN}[STEP 08/17] INSTALL CHROME REMOTE DESKTOP${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Adding Google CRD repository...${C_NC}"
@@ -300,7 +301,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 09/16] CONFIGURE GNOME SESSION${C_NC}"
+          echo -e "${C_CYAN}[STEP 09/17] CONFIGURE GNOME SESSION${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Detecting available GNOME session...${C_NC}"
@@ -374,7 +375,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 10/16] DISABLE SCREENSAVER AND LOCK${C_NC}"
+          echo -e "${C_CYAN}[STEP 10/17] DISABLE SCREENSAVER AND LOCK${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Disabling GNOME lock/suspend system-wide...${C_NC}"
@@ -413,7 +414,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 11/16] INSTALL SAFE-UPGRADE HELPER${C_NC}"
+          echo -e "${C_CYAN}[STEP 11/17] INSTALL SAFE-UPGRADE HELPER${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Copying repo scripts/safe-upgrade.sh...${C_NC}"
@@ -459,7 +460,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 12/16] CREATE DESKTOP SHORTCUTS${C_NC}"
+          echo -e "${C_CYAN}[STEP 12/17] CREATE DESKTOP SHORTCUTS${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Creating Antigravity shortcut...${C_NC}"
@@ -517,6 +518,53 @@ jobs:
 
 
       # ============================================================
+      # SET WALLPAPER (BLACK UNICAT / CATPPUCCIN)
+      # ============================================================
+      - name: Set Wallpaper
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_RED='\033[1;31m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 13/17] SET WALLPAPER${C_NC}"
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_YELLOW}[INFO] Downloading Catppuccin 'black unicat' wallpaper...${C_NC}"
+          sudo -u runner mkdir -p /home/runner/Pictures
+          sudo -u runner wget -q -O /home/runner/Pictures/wallpaper.png \
+            "https://raw.githubusercontent.com/zhichaoh/catppuccin-wallpapers/refs/heads/main/minimalistic/black5_unicat.png" \
+            || { echo -e "${C_RED}[FAIL] Gagal mengunduh wallpaper.${C_NC}"; exit 1; }
+          sudo chown runner:runner /home/runner/Pictures/wallpaper.png
+
+          echo -e "${C_YELLOW}[INFO] Setting wallpaper via gsettings (GNOME schema)...${C_NC}"
+          # dbus-run-session menyediakan session dbus sementara agar gsettings
+          # menulis ke dconf user 'runner', yang dipakai saat CRD session menyala.
+          sudo -u runner dbus-run-session -- gsettings set org.gnome.desktop.background picture-uri "file:///home/runner/Pictures/wallpaper.png" || true
+          sudo -u runner dbus-run-session -- gsettings set org.gnome.desktop.background picture-uri-dark "file:///home/runner/Pictures/wallpaper.png" || true
+          sudo -u runner dbus-run-session -- gsettings set org.gnome.desktop.background picture-options "zoom" || true
+          sudo -u runner dbus-run-session -- gsettings set org.gnome.desktop.background picture-options-dark "zoom" || true
+
+          # Fallback autostart: set ulang wallpaper saat session mulai,
+          # meng-cover kasus dconf belum tercatat sebelum desktop jalan.
+          sudo -u runner mkdir -p /home/runner/.config/autostart
+          sudo -u runner bash -c 'cat > /home/runner/.config/autostart/set-wallpaper.desktop <<EOF
+          [Desktop Entry]
+          Type=Application
+          Name=Set Wallpaper
+          Exec=sh -c "sleep 3; gsettings set org.gnome.desktop.background picture-uri file:///home/runner/Pictures/wallpaper.png; gsettings set org.gnome.desktop.background picture-uri-dark file:///home/runner/Pictures/wallpaper.png; gsettings set org.gnome.desktop.background picture-options zoom"
+          X-GNOME-Autostart-enabled=true
+          Terminal=false
+          EOF'
+
+          echo "------------------------------------------------------------"
+          ls -l /home/runner/Pictures/wallpaper.png || true
+          sudo -u runner file /home/runner/Pictures/wallpaper.png || true
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_GREEN}[OK] Wallpaper installed and set for runner.${C_NC}"
+
+
+      # ============================================================
       # SET CRD PIN
       #
       # Default:
@@ -535,7 +583,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 13/16] CONFIGURE CRD PIN${C_NC}"
+          echo -e "${C_CYAN}[STEP 14/17] CONFIGURE CRD PIN${C_NC}"
           echo "------------------------------------------------------------"
 
           if [ -n "$CUSTOM_CRD_PIN" ]; then
@@ -571,7 +619,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 14/16] REGISTER CHROME REMOTE DESKTOP${C_NC}"
+          echo -e "${C_CYAN}[STEP 15/17] REGISTER CHROME REMOTE DESKTOP${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Validating host command input...${C_NC}"
@@ -610,7 +658,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 15/16] VERIFY INSTALLATION${C_NC}"
+          echo -e "${C_CYAN}[STEP 16/17] VERIFY INSTALLATION${C_NC}"
           echo "------------------------------------------------------------"
 
           echo "::group::[CHECK] System"

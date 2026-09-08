@@ -1,0 +1,508 @@
+name: RICH LINUX (GNOME + Chrome Remote Desktop)
+
+on:
+  workflow_dispatch:
+    inputs:
+      crd_host_command:
+        description: "Paste SELURUH command Chrome Remote Desktop dari halaman Remote Access"
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    steps:
+
+      # ============================================================
+      # PREPARE SYSTEM
+      # ============================================================
+      - name: Prepare System
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_RED='\033[1;31m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 01/14] PREPARE SYSTEM${C_NC}"
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_YELLOW}[INFO] Updating package lists...${C_NC}"
+          sudo apt-get update
+
+          echo -e "${C_YELLOW}[INFO] Removing unnecessary packages...${C_NC}"
+          sudo apt-get remove -y --purge \
+            man-db \
+            firewalld \
+            ufw \
+            || true
+
+          sudo apt-get autoremove -y || true
+
+          echo -e "${C_GREEN}[OK] System prepared.${C_NC}"
+
+
+      # ============================================================
+      # INSTALL GNOME
+      # ============================================================
+      - name: Install GNOME Desktop
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 02/14] INSTALL GNOME DESKTOP${C_NC}"
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_YELLOW}[INFO] Installing full GNOME desktop (approx 2GB, please wait)...${C_NC}"
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            ubuntu-desktop \
+            ubuntu-desktop-minimal \
+            gnome-shell \
+            gnome-control-center \
+            nautilus \
+            gnome-terminal \
+            dbus-x11 \
+            x11-xserver-utils \
+            xorg \
+            adwaita-icon-theme \
+            fonts-cantarell
+
+          echo -e "${C_YELLOW}[INFO] Compiling GSettings schemas...${C_NC}"
+          sudo glib-compile-schemas /usr/share/glib-2.0/schemas/ || true
+
+          echo "------------------------------------------------------------"
+          gnome-shell --version || true
+          gnome-control-center --version || true
+          ls /usr/share/xsessions/ubuntu.desktop || true
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_GREEN}[OK] GNOME installed: $(gnome-shell --version 2>/dev/null || echo 'version check skipped')${C_NC}"
+
+
+      # ============================================================
+      # CREATE REMOTE USER
+      # ============================================================
+      - name: Setup Remote User
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 03/14] SETUP REMOTE USER${C_NC}"
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_YELLOW}[INFO] Creating user 'runner'...${C_NC}"
+          sudo useradd \
+            -m \
+            -s /bin/bash \
+            runner || true
+
+          echo "runner:Antigravity2026!" | sudo chpasswd
+
+          sudo usermod -aG sudo runner
+
+          sudo mkdir -p /home/runner/Desktop
+
+          sudo chown -R runner:runner /home/runner
+
+          echo -e "${C_GREEN}[OK] Remote user 'runner' created: $(id runner)${C_NC}"
+
+
+      # ============================================================
+      # INSTALL GOOGLE CHROME
+      # ============================================================
+      - name: Install Google Chrome
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 04/14] INSTALL GOOGLE CHROME${C_NC}"
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_YELLOW}[INFO] Downloading Google Chrome stable...${C_NC}"
+          wget -q \
+            https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+            -O /tmp/google-chrome.deb
+
+          echo -e "${C_YELLOW}[INFO] Installing .deb package...${C_NC}"
+          sudo apt-get install -y /tmp/google-chrome.deb
+
+          rm -f /tmp/google-chrome.deb
+
+          echo -e "${C_GREEN}[OK] Google Chrome installed: $(google-chrome --version)${C_NC}"
+
+
+      # ============================================================
+      # INSTALL VS CODE
+      # ============================================================
+      - name: Install VS Code
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 05/14] INSTALL VS CODE${C_NC}"
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_YELLOW}[INFO] Adding Microsoft repository...${C_NC}"
+          wget -qO- \
+            https://packages.microsoft.com/keys/microsoft.asc \
+            | gpg --dearmor \
+            | sudo tee /etc/apt/keyrings/packages.microsoft.gpg > /dev/null
+
+          echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" \
+            | sudo tee /etc/apt/sources.list.d/vscode.list > /dev/null
+
+          sudo apt-get update
+
+          echo -e "${C_YELLOW}[INFO] Installing VS Code...${C_NC}"
+          sudo apt-get install -y code
+
+          echo -e "${C_GREEN}[OK] VS Code installed: $(code --version | head -n 1)${C_NC}"
+
+
+      # ============================================================
+      # INSTALL OPENCODE CLI
+      # ============================================================
+      - name: Install OpenCode CLI
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 06/14] INSTALL OPENCODE CLI${C_NC}"
+          echo "------------------------------------------------------------"
+
+          sudo apt-get update
+
+          sudo apt-get install -y curl
+
+          # NOTE: installer opencode.ai/install mengabaikan
+          # OPENCODE_INSTALL_DIR dan selalu install ke $HOME/.opencode/bin.
+          # $GITHUB_PATH dari installer hanya berlaku untuk step berikutnya,
+          # jadi export PATH manual untuk step yang sama.
+          echo -e "${C_YELLOW}[INFO] Running official OpenCode installer...${C_NC}"
+          curl -fsSL https://opencode.ai/install | bash
+
+          export PATH="$HOME/.opencode/bin:$PATH"
+
+          # Salin system-wide agar tersedia untuk root + runner +
+          # GNOME Terminal via CRD (yang tidak selalu load ~/.bashrc baru).
+          sudo cp "$HOME/.opencode/bin/opencode" /usr/local/bin/opencode || true
+          sudo chmod +x /usr/local/bin/opencode || true
+
+          echo -e "${C_GREEN}[OK] OpenCode CLI installed: $(opencode --version)${C_NC}"
+          echo -e "${C_GREEN}[OK] Binary location: $(which opencode)${C_NC}"
+
+
+      # ============================================================
+      # INSTALL OPENCODE DESKTOP
+      # ============================================================
+      - name: Install OpenCode Desktop
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 07/14] INSTALL OPENCODE DESKTOP${C_NC}"
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_YELLOW}[INFO] Downloading OpenCode Desktop (.deb latest)...${C_NC}"
+          wget -q https://opencode.ai/download/stable/linux-x64-deb \
+            -O /tmp/opencode-desktop.deb
+
+          echo -e "${C_YELLOW}[INFO] Installing .deb package...${C_NC}"
+          sudo apt-get install -y /tmp/opencode-desktop.deb
+
+          rm -f /tmp/opencode-desktop.deb
+
+          echo "------------------------------------------------------------"
+          dpkg -l | grep -i opencode || true
+          ls /usr/share/applications/*opencode* || true
+          which opencode-desktop || true
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_GREEN}[OK] OpenCode Desktop installed.${C_NC}"
+
+
+      # ============================================================
+      # INSTALL CHROME REMOTE DESKTOP
+      # ============================================================
+      - name: Install Chrome Remote Desktop
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 08/14] INSTALL CHROME REMOTE DESKTOP${C_NC}"
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_YELLOW}[INFO] Adding Google CRD repository...${C_NC}"
+
+          wget -qO- \
+            https://dl.google.com/linux/linux_signing_key.pub \
+            | gpg --dearmor \
+            | sudo tee /etc/apt/keyrings/google-linux.gpg > /dev/null
+
+          echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-linux.gpg] http://dl.google.com/linux/chrome-remote-desktop/deb/ stable main" \
+            | sudo tee /etc/apt/sources.list.d/chrome-remote-desktop.list > /dev/null
+
+          sudo apt-get update
+
+          echo -e "${C_YELLOW}[INFO] Installing chrome-remote-desktop...${C_NC}"
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            chrome-remote-desktop
+
+          echo -e "${C_GREEN}[OK] Chrome Remote Desktop installed.${C_NC}"
+
+
+      # ============================================================
+      # CONFIGURE GNOME SESSION
+      # ============================================================
+      - name: Configure CRD GNOME Session
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 09/14] CONFIGURE GNOME SESSION${C_NC}"
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_YELLOW}[INFO] Writing .chrome-remote-desktop-session...${C_NC}"
+          sudo -u runner bash -c 'cat > /home/runner/.chrome-remote-desktop-session <<EOF
+          exec /etc/X11/Xsession "gnome-session"
+          EOF'
+
+          sudo chown runner:runner \
+            /home/runner/.chrome-remote-desktop-session
+
+          sudo chmod +x \
+            /home/runner/.chrome-remote-desktop-session
+
+          echo -e "${C_GREEN}[OK] GNOME session configured for CRD.${C_NC}"
+
+
+      # ============================================================
+      # CREATE DESKTOP SHORTCUTS
+      # ============================================================
+      - name: Create Desktop Shortcuts
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 10/14] CREATE DESKTOP SHORTCUTS${C_NC}"
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_YELLOW}[INFO] Creating Antigravity shortcut...${C_NC}"
+          sudo -u runner bash -c 'cat > /home/runner/Desktop/Antigravity.desktop <<EOF
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=Google Antigravity
+          Comment=Open Google Antigravity
+          Exec=google-chrome --app=https://antigravity.google/ --no-sandbox
+          Icon=google-chrome
+          Terminal=false
+          EOF'
+
+          echo -e "${C_YELLOW}[INFO] Creating VS Code shortcut...${C_NC}"
+          sudo -u runner bash -c 'cat > /home/runner/Desktop/VSCode.desktop <<EOF
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=Visual Studio Code
+          Comment=Visual Studio Code
+          Exec=code
+          Icon=code
+          Terminal=false
+          EOF'
+
+          # OpenCode Desktop (.deb sudah menyediakan .desktop di
+          # /usr/share/applications, tinggal salin ke Desktop).
+          # Fallback: buat manual jika file tidak ditemukan.
+          echo -e "${C_YELLOW}[INFO] Linking OpenCode shortcut...${C_NC}"
+          if ls /usr/share/applications/*opencode*.desktop 1> /dev/null 2>&1; then
+            cp /usr/share/applications/*opencode*.desktop /home/runner/Desktop/ || true
+          else
+            sudo -u runner bash -c 'cat > /home/runner/Desktop/OpenCode.desktop <<EOF
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=OpenCode
+          Comment=OpenCode Desktop
+          Exec=opencode-desktop
+          Icon=opencode-desktop
+          Terminal=false
+          EOF'
+          fi
+
+          sudo chmod +x /home/runner/Desktop/*.desktop
+
+          sudo chown -R runner:runner /home/runner/Desktop
+
+          echo "------------------------------------------------------------"
+          ls -l /home/runner/Desktop/*.desktop || true
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_GREEN}[OK] Desktop shortcuts created.${C_NC}"
+
+
+      # ============================================================
+      # SET CRD PIN
+      #
+      # Default:
+      #   123456
+      #
+      # Custom:
+      #   Create GitHub Actions secret/variable:
+      #
+      #   CRD_PIN=your-pin
+      # ============================================================
+      - name: Configure CRD PIN
+        env:
+          CUSTOM_CRD_PIN: ${{ secrets.CRD_PIN }}
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_RED='\033[1;31m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 11/14] CONFIGURE CRD PIN${C_NC}"
+          echo "------------------------------------------------------------"
+
+          if [ -n "$CUSTOM_CRD_PIN" ]; then
+            CRD_PIN="$CUSTOM_CRD_PIN"
+            echo -e "${C_YELLOW}[INFO] Using custom CRD PIN from secret CRD_PIN.${C_NC}"
+          else
+            CRD_PIN="123456"
+            echo -e "${C_YELLOW}[INFO] No CRD_PIN secret found.${C_NC}"
+            echo -e "${C_YELLOW}[INFO] Using default PIN: 123456${C_NC}"
+          fi
+
+          # Validate PIN
+          if ! [[ "$CRD_PIN" =~ ^[0-9]{6,}$ ]]; then
+            echo -e "${C_RED}[FAIL] CRD_PIN must contain at least 6 digits.${C_NC}"
+            exit 1
+          fi
+
+          echo "::add-mask::$CRD_PIN"
+
+          echo "CRD_PIN=$CRD_PIN" >> "$GITHUB_ENV"
+
+          echo -e "${C_GREEN}[OK] CRD PIN configured.${C_NC}"
+
+
+      # ============================================================
+      # REGISTER CHROME REMOTE DESKTOP
+      # ============================================================
+      - name: Register Chrome Remote Desktop
+        env:
+          CRD_COMMAND: ${{ inputs.crd_host_command }}
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_RED='\033[1;31m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 12/14] REGISTER CHROME REMOTE DESKTOP${C_NC}"
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_YELLOW}[INFO] Validating host command input...${C_NC}"
+
+          if [ -z "$CRD_COMMAND" ]; then
+            echo -e "${C_RED}[FAIL] CRD host command is empty.${C_NC}"
+            exit 1
+          fi
+
+          echo -e "${C_YELLOW}[INFO] Registering host as user 'runner'...${C_NC}"
+
+          # Jalankan command CRD sebagai user runner.
+          # PIN akan diberikan melalui environment CRD_PIN.
+          sudo -u runner \
+            env CRD_PIN="$CRD_PIN" \
+            bash -c "$CRD_COMMAND --pin=\"$CRD_PIN\""
+
+          echo ""
+          echo "=============================================================="
+          echo -e "${C_GREEN}      [OK] CHROME REMOTE DESKTOP READY${C_NC}"
+          echo "=============================================================="
+          echo -e "      [INFO] Access    : https://remotedesktop.google.com/access"
+          echo -e "      [INFO] User      : runner"
+          echo -e "      [INFO] PIN       : default 123456 (or custom via secret CRD_PIN)"
+          echo "=============================================================="
+          echo ""
+          echo "::notice::CRD ready - connect via https://remotedesktop.google.com/access as user runner"
+
+
+      # ============================================================
+      # VERIFY
+      # ============================================================
+      - name: Verify Installation
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 13/14] VERIFY INSTALLATION${C_NC}"
+          echo "------------------------------------------------------------"
+
+          echo "::group::[CHECK] System"
+          uname -a
+          echo "::endgroup::"
+
+          echo "::group::[CHECK] GNOME"
+          gnome-shell --version || true
+          echo "::endgroup::"
+
+          echo "::group::[CHECK] Google Chrome"
+          google-chrome --version || true
+          echo "::endgroup::"
+
+          echo "::group::[CHECK] VS Code"
+          code --version || true
+          echo "::endgroup::"
+
+          echo "::group::[CHECK] OpenCode CLI"
+          opencode --version || true
+          which opencode || true
+          echo "::endgroup::"
+
+          echo "::group::[CHECK] OpenCode Desktop"
+          dpkg -l | grep -i opencode || true
+          ls /usr/share/applications/*opencode* || true
+          ls /home/runner/Desktop/*pencode*.desktop || true
+          echo "::endgroup::"
+
+          echo "::group::[CHECK] Chrome Remote Desktop service"
+          systemctl status \
+            chrome-remote-desktop@runner.service \
+            --no-pager \
+            || true
+          echo "::endgroup::"
+
+          echo "::group::[CHECK] Remote user"
+          id runner
+          echo "::endgroup::"
+
+          echo ""
+          echo -e "${C_GREEN}[OK] Installation verification completed.${C_NC}"
+
+
+      # ============================================================
+      # KEEP ALIVE
+      # ============================================================
+      - name: Keep Alive
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
+
+          echo ""
+          echo "=============================================================="
+          echo -e "${C_GREEN}  [OK] CHROME REMOTE DESKTOP IS RUNNING${C_NC}"
+          echo "=============================================================="
+          echo -e "  ${C_YELLOW}[INFO] Keep-alive 6 jam (sleep 21600). Jangan cancel workflow.${C_NC}"
+          echo -e "  [INFO] Access : https://remotedesktop.google.com/access"
+          echo -e "  [INFO] User   : runner"
+          echo "=============================================================="
+
+          sleep 21600

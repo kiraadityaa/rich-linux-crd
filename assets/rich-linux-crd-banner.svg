@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="RICH Linux CRD banner">
+  <title>RICH Linux CRD — Banner</title>
+  <desc>Icon plus the RICH Linux CRD wordmark and tagline for Ubuntu 24.04 with Chrome Remote Desktop (Cinnamon or GNOME).</desc>
+
+  <style>
+    .bg    { fill: #ffffff; stroke: #d0d7de; }
+    .ring  { fill: none; stroke: #0969da; }
+    .frame { fill: none; stroke: #24292f; }
+    .screen{ fill: #f6f8fa; stroke: #57606a; }
+    .accent{ fill: #E95420; }
+    .accent-d { fill: #cc4b1f; }
+    .blue  { fill: #0969da; }
+    .term  { fill: #24292f; }
+    .term-caret { fill: none; stroke: #0969da; }
+    .cursor{ fill: #0969da; }
+    .t-title { fill: #1f2328; }
+    .t-sub   { fill: #57606a; }
+    .t-mono  { fill: #0969da; }
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill: #0d1117; stroke: #30363d; }
+      .ring  { stroke: #4493f8; }
+      .frame { stroke: #8b949e; }
+      .screen{ fill: #161b22; stroke: #8b949e; }
+      .accent{ fill: #f0883e; }
+      .accent-d { fill: #d66a2e; }
+      .blue  { fill: #4493f8; }
+      .term  { fill: #e6edf3; }
+      .term-caret { stroke: #4493f8; }
+      .cursor{ fill: #4493f8; }
+      .t-title { fill: #e6edf3; }
+      .t-sub   { fill: #9198a1; }
+      .t-mono  { fill: #4493f8; }
+    }
+  </style>
+
+  <!-- Card background -->
+  <rect x="16" y="16" width="1168" height="368" rx="24" class="bg" stroke-width="2"/>
+
+  <!-- Connection ring behind icon -->
+  <g transform="translate(40,40)">
+    <circle cx="160" cy="160" r="128" class="ring" stroke-width="5" stroke-dasharray="3 7" stroke-linecap="round"/>
+  </g>
+
+  <!-- Icon: Ubuntu accent + remote monitor + terminal (mirrors logo, centered at 200,200) -->
+  <g transform="translate(0,0)">
+    <!-- Ubuntu accent -->
+    <circle cx="296" cy="120" r="26" class="accent"/>
+    <circle cx="296" cy="120" r="10" class="accent-d"/>
+
+    <!-- monitor -->
+    <rect x="182" y="132" width="92" height="12" rx="6" class="term"/>
+    <rect x="150" y="160" width="150" height="112" rx="16" class="frame" stroke-width="7"/>
+    <rect x="164" y="174" width="122" height="84" rx="10" class="screen" stroke-width="3.5"/>
+    <!-- connection glue -->
+    <circle cx="192" cy="196" r="20" class="blue" opacity="0.18"/>
+    <g transform="translate(196,198)">
+      <path d="M0 0 L12 15 L7 15.5 L9 23 L5 21.5 L2 28 L0 0 Z" class="cursor"/>
+    </g>
+    <!-- window dots -->
+    <circle cx="182" cy="186" r="3.6" class="accent"/>
+    <circle cx="196" cy="186" r="3.6" class="blue"/>
+    <rect x="210" y="182" width="64" height="6" rx="3" class="term" opacity="0.35"/>
+  </g>
+
+  <!-- Terminal prompt bottom-left -->
+  <g>
+    <rect x="110" y="276" width="88" height="46" rx="11" class="screen" stroke-width="4"/>
+    <text x="126" y="305" font-size="25" font-weight="700" class="term">>_</text>
+    <rect x="110" y="276" width="88" height="6" rx="3" class="blue" opacity="0.5"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="420" y="200" font-size="58" font-weight="800" class="t-title">RICH LINUX <tspan class="blue">CRD</tspan></text>
+  <text x="424" y="244" font-size="26" class="t-sub">Ubuntu 24.04 · Chrome Remote Desktop · Cinnamon or GNOME</text>
+  <text x="424" y="286" font-size="20" class="t-sub">Headless X11 on GitHub Actions — connect from anywhere with a PIN.</text>
+
+  <!-- Tag pill -->
+  <g>
+    <rect x="424" y="306" width="210" height="36" rx="18" class="screen" stroke-width="2"/>
+    <circle cx="446" cy="324" r="7" class="accent"/>
+    <text x="464" y="330" font-size="18" font-weight="700" class="t-mono" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">remote via browser</text>
+  </g>
+</svg>

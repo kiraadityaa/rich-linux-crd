@@ -4,6 +4,10 @@
 
 > Ubuntu 24.04 di GitHub Actions + Chrome Remote Desktop. Pilih desktop **Cinnamon** yang ringan atau **GNOME** yang stabil, lalu remote dari mana saja dengan PIN.
 
+<p align="center">
+  <img src="assets/rich-linux-crd-banner.svg" alt="Banner RICH Linux CRD" width="820" />
+</p>
+
 Dokumen utama (lengkap, dalam Bahasa Inggris): [README.md](README.md). Halaman ini ringkasannya dalam Bahasa Indonesia.
 
 **Fitur cepat:**

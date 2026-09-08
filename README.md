@@ -5,6 +5,10 @@
 > Ubuntu 24.04 on GitHub Actions + Chrome Remote Desktop. Pick your desktop — lightweight **Cinnamon** or stable **GNOME** — and connect from anywhere with a PIN.
 
 <p align="center">
+  <img src="assets/rich-linux-crd-banner.svg" alt="RICH Linux CRD banner" width="820" />
+</p>
+
+<p align="center">
   <a href="https://github.com/kiraadityaa/rich-linux-crd/actions/workflows/cinnamon.yml"><img src="https://github.com/kiraadityaa/rich-linux-crd/actions/workflows/cinnamon.yml/badge.svg" alt="Cinnamon workflow status" /></a>
   <a href="https://github.com/kiraadityaa/rich-linux-crd/actions/workflows/gnome.yml"><img src="https://github.com/kiraadityaa/rich-linux-crd/actions/workflows/gnome.yml/badge.svg" alt="GNOME workflow status" /></a>
   <img src="https://img.shields.io/badge/Ubuntu-24.04-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt="Ubuntu 24.04" />
@@ -18,7 +22,7 @@
 
 ![Architecture: user input flows through GitHub Actions install and CRD registration to browser connect](assets/architecture.svg)
 
-Image sources: workflow status badges from GitHub Actions, technology badges from Shields.io, architecture diagram from [`assets/architecture.svg`](assets/architecture.svg) in this repository. No external stock photography.
+Image sources: workflow status badges from GitHub Actions, technology badges from Shields.io, banner from [`assets/rich-linux-crd-banner.svg`](assets/rich-linux-crd-banner.svg) and architecture diagram from [`assets/architecture.svg`](assets/architecture.svg) in this repository. No external stock photography.
 
 ---
 

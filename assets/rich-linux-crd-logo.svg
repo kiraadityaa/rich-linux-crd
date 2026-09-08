@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="RICH Linux CRD logo">
+  <title>RICH Linux CRD — Logo</title>
+  <desc>Rounded-square icon with a remote-desktop monitor and Ubuntu terminal prompt representing Ubuntu 24.04 with Chrome Remote Desktop on GitHub Actions.</desc>
+
+  <style>
+    .bg    { fill: #f6f8fa; stroke: #d0d7de; }
+    .ring  { fill: none; stroke: #0969da; }
+    .frame { fill: none; stroke: #24292f; }
+    .screen{ fill: #ffffff; stroke: #57606a; }
+    .accent{ fill: #E95420; }
+    .accent-d { fill: #cc4b1f; }
+    .blue  { fill: #0969da; }
+    .term  { fill: #24292f; }
+    .term-caret { fill: none; stroke: #0969da; }
+    .cursor{ fill: #0969da; }
+    .shadow { fill: #d0d7de; }
+    @media (prefers-color-scheme: dark) {
+      .bg    { fill: #161b22; stroke: #30363d; }
+      .ring  { stroke: #4493f8; }
+      .frame { stroke: #8b949e; }
+      .screen{ fill: #0d1117; stroke: #8b949e; }
+      .accent{ fill: #f0883e; }
+      .accent-d { fill: #d66a2e; }
+      .blue  { fill: #4493f8; }
+      .term  { fill: #e6edf3; }
+      .term-caret { stroke: #4493f8; }
+      .cursor{ fill: #4493f8; }
+      .shadow { fill: #30363d; }
+    }
+  </style>
+
+  <!-- Rounded-square background -->
+  <rect x="12" y="12" width="488" height="488" rx="104" class="bg" stroke-width="4"/>
+
+  <!-- Subtle connection ring (remote access, from anywhere) -->
+  <circle cx="256" cy="256" r="196" class="ring" stroke-width="6" stroke-dasharray="3 8" stroke-linecap="round"/>
+  <line x1="256" y1="60" x2="256" y2="120" class="ring" stroke-width="6"/>
+  <line x1="256" y1="392" x2="256" y2="452" class="ring" stroke-width="6"/>
+  <line x1="60" y1="256" x2="120" y2="256" class="ring" stroke-width="6"/>
+  <line x1="392" y1="256" x2="452" y2="256" class="ring" stroke-width="6"/>
+
+  <!-- Terminal ">_" prompt (bottom-left) -->
+  <g>
+    <rect x="120" y="330" width="120" height="62" rx="14" class="screen" stroke-width="5"/>
+    <text x="140" y="368" font-size="34" font-weight="700" class="term">&gt;_</text>
+    <path d="M212 344 l18 17 -18 17" fill="none" class="term-caret" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Ubuntu accent circle (top-right) -->
+  <g>
+    <circle cx="390" cy="136" r="34" class="accent" stroke-width="0"/>
+    <circle cx="390" cy="136" r="13" class="accent-d"/>
+  </g>
+
+  <!-- Remote-desktop monitor (center) -->
+  <g>
+    <!-- stand -->
+    <rect x="244" y="360" width="24" height="26" rx="4" class="term"/>
+    <rect x="216" y="384" width="80" height="10" rx="5" class="term"/>
+    <!-- frame -->
+    <rect x="158" y="132" width="196" height="148" rx="18" class="frame" stroke-width="9"/>
+    <!-- screen -->
+    <rect x="176" y="150" width="160" height="112" rx="12" class="screen" stroke-width="4"/>
+
+    <!-- connection glue / cursor inside screen -->
+    <circle cx="208" cy="182" r="26" class="blue" opacity="0.18"/>
+    <path d="M206 176 a 26 26 0 0 1 0 52" class="ring" stroke-width="5" fill="none"/>
+    <g transform="translate(212,186)">
+      <path d="M0 0 L16 20 L9 21 L12 30 L6 28 L3 37 L0 0 Z" class="cursor"/>
+    </g>
+
+    <!-- window dots -->
+    <circle cx="196" cy="168" r="5" class="accent"/>
+    <circle cx="214" cy="168" r="5" class="blue"/>
+    <rect x="232" y="164" width="88" height="8" rx="4" class="term" opacity="0.35"/>
+  </g>
+
+  <!-- Terminal underline bar -->
+  <rect x="120" y="330" width="120" height="8" rx="4" class="blue" opacity="0.5"/>
+</svg>

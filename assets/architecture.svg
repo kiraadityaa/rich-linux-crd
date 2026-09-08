@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="RICH Linux CRD architecture diagram">
+  <title>RICH Linux CRD — Architecture</title>
+  <desc>User pastes CRD host command into GitHub Actions, runner installs desktop and tools, registers Chrome Remote Desktop host, user connects from browser.</desc>
+
+  <!-- Title -->
+  <text x="40" y="40" font-size="22" font-weight="700" fill="#24292f">RICH Linux CRD — Architecture</text>
+  <text x="40" y="62" font-size="13" fill="#57606a">Ubuntu 24.04 on GitHub Actions + Chrome Remote Desktop (headless X11, no LightDM)</text>
+
+  <!-- Boxes -->
+  <g font-size="13">
+    <!-- Step 1 -->
+    <rect x="40" y="100" width="200" height="150" rx="10" fill="#ffffff" stroke="#24292f" stroke-width="1.5"/>
+    <text x="56" y="128" font-size="11" font-weight="700" fill="#0969da">1 — INPUT</text>
+    <text x="56" y="150" font-size="14" font-weight="700" fill="#24292f">User input</text>
+    <text x="56" y="172" fill="#24292f">CRD host command</text>
+    <text x="56" y="192" fill="#24292f">from headless setup</text>
+    <text x="56" y="212" fill="#57606a">+ PIN (default 123456</text>
+    <text x="56" y="230" fill="#57606a">or CRD_PIN secret)</text>
+
+    <!-- Arrow -->
+    <line x1="240" y1="175" x2="272" y2="175" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Step 2 -->
+    <rect x="272" y="100" width="200" height="150" rx="10" fill="#ffffff" stroke="#24292f" stroke-width="1.5"/>
+    <text x="288" y="128" font-size="11" font-weight="700" fill="#0969da">2 — RUNNER</text>
+    <text x="288" y="150" font-size="14" font-weight="700" fill="#24292f">GitHub Actions</text>
+    <text x="288" y="172" fill="#24292f">ubuntu-24.04 runner</text>
+    <text x="288" y="192" fill="#24292f">prepare system</text>
+    <text x="288" y="212" fill="#57606a">full upgrade at</text>
+    <text x="288" y="230" fill="#57606a">build time (safe)</text>
+
+    <line x1="472" y1="175" x2="504" y2="175" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Step 3 -->
+    <rect x="504" y="100" width="216" height="150" rx="10" fill="#ffffff" stroke="#24292f" stroke-width="1.5"/>
+    <text x="520" y="128" font-size="11" font-weight="700" fill="#0969da">3 — INSTALL</text>
+    <text x="520" y="150" font-size="14" font-weight="700" fill="#24292f">Desktop + tools</text>
+    <text x="520" y="172" fill="#24292f">Cinnamon or GNOME</text>
+    <text x="520" y="192" fill="#24292f">Chrome, VS Code,</text>
+    <text x="520" y="212" fill="#24292f">OpenCode, CRD</text>
+    <text x="520" y="230" fill="#57606a">safe-upgrade helper</text>
+
+    <line x1="720" y1="175" x2="752" y2="175" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Step 4 -->
+    <rect x="752" y="100" width="200" height="150" rx="10" fill="#ffffff" stroke="#24292f" stroke-width="1.5"/>
+    <text x="768" y="128" font-size="11" font-weight="700" fill="#0969da">4 — REGISTER</text>
+    <text x="768" y="150" font-size="14" font-weight="700" fill="#24292f">CRD host</text>
+    <text x="768" y="172" fill="#24292f">direct exec session</text>
+    <text x="768" y="192" fill="#24292f">software rendering</text>
+    <text x="768" y="212" fill="#57606a">no Xsession wrapper</text>
+    <text x="768" y="230" fill="#57606a">lock/suspend off</text>
+
+    <line x1="952" y1="175" x2="984" y2="175" stroke="#57606a" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Step 5 -->
+    <rect x="984" y="100" width="176" height="150" rx="10" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/>
+    <text x="1000" y="128" font-size="11" font-weight="700" fill="#0969da">5 — CONNECT</text>
+    <text x="1000" y="150" font-size="14" font-weight="700" fill="#24292f">Browser</text>
+    <text x="1000" y="172" fill="#24292f">remotedesktop.</text>
+    <text x="1000" y="192" fill="#24292f">google.com/access</text>
+    <text x="1000" y="212" fill="#57606a">enter PIN,</text>
+    <text x="1000" y="230" fill="#57606a">6-hour session</text>
+  </g>
+
+  <!-- Footer note -->
+  <text x="40" y="290" font-size="12" fill="#57606a">In-session upgrades use the </text>
+  <text x="232" y="290" font-size="12" font-weight="700" fill="#24292f" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">safe-upgrade</text>
+  <text x="322" y="290" font-size="12" fill="#57606a"> helper — never run plain </text>
+  <text x="544" y="290" font-size="12" font-weight="700" fill="#24292f" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">sudo apt upgrade -y</text>
+  <text x="712" y="290" font-size="12" fill="#57606a"> inside the CRD session (it restarts CRD/desktop/systemd and drops the connection).</text>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#57606a"/>
+    </marker>
+  </defs>
+</svg>

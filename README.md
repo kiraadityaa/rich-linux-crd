@@ -1,8 +1,8 @@
-# 🖥️ RICH Linux CRD
+# RICH Linux CRD
 
-> Ubuntu 24.04 di GitHub Actions + Chrome Remote Desktop. Pilih desktop favoritmu — **Cinnamon** yang elegan atau **GNOME** yang stabil — lalu remote dari mana saja pakai PIN.
+**English** | [Bahasa Indonesia](README.id.md)
 
-![Hero — laptop dan kode](https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80)
+> Ubuntu 24.04 on GitHub Actions + Chrome Remote Desktop. Pick your desktop — lightweight **Cinnamon** or stable **GNOME** — and connect from anywhere with a PIN.
 
 <p align="center">
   <a href="https://github.com/kiraadityaa/rich-linux-crd/actions/workflows/cinnamon.yml"><img src="https://github.com/kiraadityaa/rich-linux-crd/actions/workflows/cinnamon.yml/badge.svg" alt="Cinnamon workflow status" /></a>
@@ -16,84 +16,89 @@
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="MIT License" />
 </p>
 
+![Architecture: user input flows through GitHub Actions install and CRD registration to browser connect](assets/architecture.svg)
+
+Image sources: workflow status badges from GitHub Actions, technology badges from Shields.io, architecture diagram from [`assets/architecture.svg`](assets/architecture.svg) in this repository. No external stock photography.
+
 ---
 
-## ✨ Kenapa repo ini?
+## Overview
 
-| Fitur | Detail |
+| Feature | Detail |
 |---|---|
-| 🖥️ **2 pilihan desktop** | Cinnamon Full (~1 GB) atau GNOME Ubuntu Desktop (~2 GB) |
-| 🌐 **Remote instan** | Chrome Remote Desktop, PIN default `123456` (bisa custom via secret) |
-| 🧰 **Dev tools siap pakai** | Google Chrome, VS Code, OpenCode CLI + OpenCode Desktop |
-| ⏳ **Tahan 6 jam** | Keep-alive otomatis per workflow run |
-| 🛡️ **Anti crash session** | Direct `exec` tanpa wrapper `Xsession`/`lightdm` + software rendering Mesa (fix layar *"Oh no! Something has gone wrong"*) |
-| 🔒 **Anti putus upgrade** | Full `upgrade` di build-time + helper `safe-upgrade` di dalam sesi (hold CRD/desktop/systemd) |
-| 📌 **Shortcut desktop** | Antigravity, VS Code, Files, Terminal, OpenCode, Safe Upgrade |
-
-![Server room](https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1200&q=80)
+| Two desktops | Cinnamon Full (approx. 1 GB) or GNOME Ubuntu Desktop (approx. 2 GB) |
+| Instant remote access | Chrome Remote Desktop, default PIN `123456` (customizable via secret) |
+| Dev tools included | Google Chrome, VS Code, OpenCode CLI + OpenCode Desktop |
+| Session length | Automatic keep-alive per workflow run (up to 6 hours) |
+| Crash-resistant session | Direct `exec` without `Xsession`/`lightdm` wrappers + Mesa software rendering (fixes the "Oh no! Something has gone wrong" screen) |
+| Disconnect-safe upgrades | Full `upgrade` at build time + [`safe-upgrade`](scripts/safe-upgrade.sh) helper inside the session (holds CRD/desktop/systemd packages) |
+| Desktop shortcuts | Antigravity, VS Code, Files, Terminal, OpenCode, Safe Upgrade |
 
 ---
 
-## 🏗️ Cara kerja
+## How it works
 
 ```mermaid
 flowchart LR
-    A["👆 Kamu: Run workflow\n+ paste CRD command"] --> B["⚙️ GitHub Actions\nubuntu-24.04"]
-    B --> C["📦 Install:\nCinnamon/GNOME\nChrome, VS Code,\nOpenCode, CRD"]
-    C --> D["🔑 Register host\nPIN 123456"]
-    D --> E["🖥️ Session X11\ntanpa LightDM"]
-    E --> F["🌐 Kamu connect via\nremotedesktop.google.com/access"]
+    A["You: run workflow + paste CRD command"] --> B["GitHub Actions ubuntu-24.04"]
+    B --> C["Install: Cinnamon/GNOME, Chrome, VS Code, OpenCode, CRD"]
+    C --> D["Register host, PIN 123456"]
+    D --> E["X11 session without LightDM"]
+    E --> F["You connect via remotedesktop.google.com/access"]
 ```
 
 ---
 
-## 🚀 Quick Start (5 menit)
+## Quick Start (5 minutes)
 
-### 1️⃣ Ambil CRD host command
-1. Buka <https://remotedesktop.google.com/headless> di browser yang login akun Googlemu.
-2. Klik **Begin** → **Next** → **Authorize**.
-3. Salin **perintah Debian Linux** yang muncul (diawali `DISPLAY= ... start-host ...`). **Jangan jalankan di lokal** — cukup salin.
+### 1. Get the CRD host command
 
-### 2️⃣ Jalankan workflow
-1. Buka tab **Actions** di repo ini.
-2. Pilih workflow:
-   - 🟢 **RICH LINUX (Cinnamon + Chrome Remote Desktop)** → file `.github/workflows/cinnamon.yml`
-   - 🔵 **RICH LINUX (GNOME + Chrome Remote Desktop)** → file `.github/workflows/gnome.yml`
-3. Klik **Run workflow**, paste perintah CRD ke field `crd_host_command`, klik **Run**.
-4. Tunggu ± 5–10 menit sampai log menampilkan `CHROME REMOTE DESKTOP READY`.
+1. Open <https://remotedesktop.google.com/headless> in a browser logged in to your Google account.
+2. Click **Begin** → **Next** → **Authorize**.
+3. Copy the **Debian Linux** command shown (starts with `DISPLAY= ... start-host ...`). Do not run it locally — just copy it.
 
-### 3️⃣ Connect
-1. Buka <https://remotedesktop.google.com/access>.
-2. Klik device-mu → masukkan PIN:
+### 2. Run the workflow
+
+1. Open the **Actions** tab in this repository.
+2. Select a workflow:
+   - **RICH LINUX (Cinnamon + Chrome Remote Desktop)** → file `.github/workflows/cinnamon.yml`
+   - **RICH LINUX (GNOME + Chrome Remote Desktop)** → file `.github/workflows/gnome.yml`
+3. Click **Run workflow**, paste the CRD command into the `crd_host_command` field, click **Run**.
+4. Wait approx. 5–10 minutes until the log shows `CHROME REMOTE DESKTOP READY`.
+
+### 3. Connect
+
+1. Open <https://remotedesktop.google.com/access>.
+2. Click your device → enter the PIN:
    - Default: `123456`
-   - Custom: buat secret repo bernama `CRD_PIN` (minimal 6 digit) sebelum run workflow.
-3. Langsung masuk desktop. 🎉
-
-![Workspace](https://images.unsplash.com/photo-1593642702821-c8da6771f0c6?auto=format&fit=crop&w=1200&q=80)
+   - Custom: create a repository secret named `CRD_PIN` (minimum 6 digits) before running the workflow.
+3. You are in the desktop.
 
 ---
 
-## 🆚 Cinnamon vs GNOME
+## Cinnamon vs GNOME
 
-|  | 🟢 Cinnamon (`cinnamon.yml`) | 🔵 GNOME (`gnome.yml`) |
+|  | Cinnamon (`cinnamon.yml`) | GNOME (`gnome.yml`) |
 |---|---|---|
-| Tampilan | Klasik elegan ala Linux Mint | Modern ala Ubuntu |
-| Ukuran install | ± 1 GB | ± 2 GB |
-| Session CRD | `exec /usr/bin/cinnamon-session --session cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /usr/bin/gnome-session --session=ubuntu` + `LIBGL_ALWAYS_SOFTWARE=1` |
-| Display manager | ❌ Tidak dipakai (headless) | ❌ Tidak dipakai (headless) |
-| Screensaver/lock/suspend | Disabled (autostart + dconf no-lock, paket tetap terinstall) | Disabled (dconf + gsettings no-lock, suspend `nothing`) |
-| Upgrade | Build-time full upgrade + `safe-upgrade` di sesi | Build-time full upgrade + `safe-upgrade` di sesi |
-| Cocok untuk | Pecinta tampilan Mint, lebih ringan | Kestabilan maksimal |
+| Look and feel | Classic, Linux Mint style | Modern Ubuntu style |
+| Install size | Approx. 1 GB | Approx. 2 GB |
+| CRD session | `exec /usr/bin/cinnamon-session --session cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /usr/bin/gnome-session --session=ubuntu` + `LIBGL_ALWAYS_SOFTWARE=1` |
+| Display manager | Not used (headless) | Not used (headless) |
+| Screensaver, lock, suspend | Disabled (autostart + dconf no-lock, packages kept installed) | Disabled (dconf + gsettings no-lock, suspend set to `nothing`) |
+| Upgrades | Build-time full upgrade + `safe-upgrade` in session | Build-time full upgrade + `safe-upgrade` in session |
+| Best for | Mint-style look, lighter footprint | Maximum stability |
 
 ---
 
-## 🧠 Fix penting: error *"Oh no! Something has gone wrong"*
+## Troubleshooting
 
-Gejala: PIN benar dan connect berhasil, tapi layar menampilkan wajah sedih + tombol **Log Out**.
+### Error: "Oh no! Something has gone wrong"
 
-**Penyebab:** session file memakai `lightdm-session` wrapper yang butuh seat LightDM fisik — tidak ada di runner headless CRD.
+Symptom: the PIN is correct and the connection succeeds, but the screen shows a sad face with a **Log Out** button.
 
-**Solusi yang sudah diterapkan (`cinnamon.yml` / `gnome.yml`):**
+Cause: the session file used a `lightdm-session` wrapper that requires a physical LightDM seat — which does not exist on the headless CRD runner.
+
+Fix already applied in both workflows:
 
 ```bash
 # Cinnamon
@@ -104,7 +109,7 @@ XDG_RUNTIME_DIR=/run/user/$(id -u)
 LIBGL_ALWAYS_SOFTWARE=1
 exec /usr/bin/cinnamon-session --session cinnamon
 
-# GNOME (auto-deteksi ubuntu > gnome > gnome-xorg)
+# GNOME (auto-detects ubuntu > gnome > gnome-xorg)
 DESKTOP_SESSION=ubuntu
 XDG_CURRENT_DESKTOP=ubuntu:GNOME
 XDG_SESSION_TYPE=x11
@@ -114,79 +119,79 @@ MUTTER_DEBUG_FORCE_SOFTWARE_RENDER=1
 exec /usr/bin/gnome-session --session=ubuntu
 ```
 
-Plus: paket Mesa/LLVMPipe untuk software rendering, tanpa instalasi LightDM yang konflik.
+Plus Mesa/LLVMPipe packages for software rendering, with no conflicting LightDM installation.
 
----
+### Session drops after `apt upgrade` and cannot reconnect
 
-## ⚠️ Jangan `apt upgrade` polos di dalam sesi (bikin putus CRD)
+Symptom: after `sudo apt update && sudo apt upgrade -y`, the session drops suddenly and reconnecting fails. The log shows systemd restarting something.
 
-Gejala: setelah `sudo apt update && sudo apt upgrade -y`, sesi tiba-tiba putus dan tidak bisa konek ulang. Di log terlihat systemd me-restart sesuatu.
+Cause: the upgrade also raises `chrome-remote-desktop` / `gnome-shell` / `mutter` / `gdm3` / `systemd` / `dbus`, then restarts their services — killing the running X session mid-upgrade.
 
-**Penyebab:** `upgrade` ikut menaikkan `chrome-remote-desktop` / `gnome-shell` / `mutter` / `gdm3` / `systemd` / `dbus`, lalu service-nya di-restart → session X mati di tengah jalan.
+> [!WARNING]
+> Never run plain `sudo apt upgrade -y` inside the CRD session. It restarts the display stack and drops the connection (recovery requires re-running the workflow).
 
-**Aturan pakai:**
-
-| Kebutuhan | Cara |
+| Need | Command |
 |---|---|
-| Upgrade harian yang aman (di terminal CRD) | `safe-upgrade` (hold otomatis paket kritis, upgrade sisanya) |
-| Cek dulu tanpa mengubah apa pun | `safe-upgrade --check` |
-| Upgrade CRD/Chrome/GNOME juga (SESI AKAN PUTUS) | `safe-upgrade --allow-crd-restart` / `safe-upgrade --include-desktop` |
-| Dapat upgrade kritis tanpa putus | Re-run workflow Actions (sudah full `upgrade` di build-time, sebelum CRD jalan) |
+| Safe daily upgrade (in the CRD terminal) | `safe-upgrade` (automatically holds critical packages, upgrades the rest) |
+| Preview without changing anything | `safe-upgrade --check` |
+| Upgrade CRD/Chrome/desktop too (WILL DISCONNECT) | `safe-upgrade --allow-crd-restart` / `safe-upgrade --include-desktop` |
+| Get critical upgrades without disconnecting | Re-run the Actions workflow (it already runs a full `upgrade` at build time, before CRD starts) |
 
-> Lihat implementasi: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh). Workflow juga memasang shortcut Desktop **Safe Upgrade** + MOTD warning.
+> [!TIP]
+> Implementation: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh). The workflow also installs a **Safe Upgrade** desktop shortcut and a MOTD warning.
 
 ---
 
-## 📁 Struktur repo
+## Repository structure
 
 ```
 rich-linux-crd/
 ├── .github/
 │   └── workflows/
-│       ├── cinnamon.yml   # 🟢 RICH LINUX (Cinnamon + CRD)
-│       └── gnome.yml      # 🔵 RICH LINUX (GNOME + CRD)
+│       ├── cinnamon.yml   # RICH LINUX (Cinnamon + CRD)
+│       └── gnome.yml      # RICH LINUX (GNOME + CRD)
+├── assets/
+│   └── architecture.svg # Architecture diagram used in this README
 ├── scripts/
-│   └── safe-upgrade.sh  # 🔒 upgrade aman di dalam sesi CRD (pengganti apt upgrade)
-├── README.md
+│   └── safe-upgrade.sh  # Safe in-session upgrade (replacement for apt upgrade)
+├── README.md            # This file (English)
+├── README.id.md         # Indonesian summary
 ├── LICENSE
 └── .gitignore
 ```
 
 ---
 
-## 🔧 Kustomisasi
+## Customization
 
-| Kebutuhan | Cara |
+| Need | How |
 |---|---|
-| Ganti PIN | Buat secret repo `CRD_PIN` (Settings → Secrets → Actions), isi 6+ digit |
-| Ganti password user `runner` | Edit baris `echo "runner:...` di workflow |
-| Tambah aplikasi | Tambah step `apt-get install` baru sebelum step CRD |
-| Perpanjang durasi | Edit `sleep 21600` di step **Keep Alive** (maks. 6 jam karena limit Actions) |
+| Change PIN | Create a `CRD_PIN` repository secret (Settings → Secrets → Actions), 6+ digits |
+| Change the `runner` user password | Edit the `echo "runner:...` line in the workflow |
+| Add applications | Add a new `apt-get install` step before the CRD step |
+| Extend duration | Edit `sleep 21600` in the **Keep Alive** step (max 6 hours due to the Actions limit) |
 
 ---
 
-## ⚠️ Catatan
+## Notes
 
-- Workflow memakai `workflow_dispatch` — hanya jalan saat kamu trigger manual.
-- Jangan commit perintah CRD-mu ke repo (berisi kode auth sekali pakai). Paste hanya di input workflow.
-- PIN default `123456` hanya untuk kemudahan. Untuk pemakaian serius, gunakan `CRD_PIN` custom.
-- GitHub Actions free tier punya batas menit bulanan — pantau di Settings → Billing.
-
----
-
-## 🤝 Kontribusi
-
-Pull request dan issue sangat diterima! Kalau menemukan error session baru, sertakan:
-1. Nama workflow (Cinnamon / GNOME),
-2. Potongan log step **Verify Installation**,
-3. Isi `~/.chrome-remote-desktop-*.log` dari runner.
+- Workflows use `workflow_dispatch` — they only run when you trigger them manually.
+- Never commit your CRD command to the repository (it contains a one-time auth code). Paste it only into the workflow input.
+- The default PIN `123456` is for convenience only. For serious use, set a custom `CRD_PIN`.
+- The GitHub Actions free tier has monthly minute limits — monitor Settings → Billing.
 
 ---
 
-## 📷 Atribusi gambar
+## Contributing
 
-Foto hero dan ilustrasi oleh kontributor [Unsplash](https://unsplash.com) — bebas digunakan di bawah [Unsplash License](https://unsplash.com/license). Badge oleh [Shields.io](https://shields.io).
+Pull requests and issues are welcome. If you find a new session error, please include:
 
-## 📄 Lisensi
+1. Workflow name (Cinnamon / GNOME),
+2. The **Verify Installation** step log excerpt,
+3. The runner's `~/.chrome-remote-desktop-*.log` contents.
 
-MIT — lihat file [LICENSE](LICENSE).
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).

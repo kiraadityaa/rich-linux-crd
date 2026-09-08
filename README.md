@@ -26,8 +26,9 @@
 | 🌐 **Remote instan** | Chrome Remote Desktop, PIN default `123456` (bisa custom via secret) |
 | 🧰 **Dev tools siap pakai** | Google Chrome, VS Code, OpenCode CLI + OpenCode Desktop |
 | ⏳ **Tahan 6 jam** | Keep-alive otomatis per workflow run |
-| 🛡️ **Anti crash Cinnamon** | Session tanpa `lightdm-session` + software rendering Mesa (fix layar *"Oh no! Something has gone wrong"*) |
-| 📌 **Shortcut desktop** | Antigravity, VS Code, Files, Terminal, OpenCode |
+| 🛡️ **Anti crash session** | Direct `exec` tanpa wrapper `Xsession`/`lightdm` + software rendering Mesa (fix layar *"Oh no! Something has gone wrong"*) |
+| 🔒 **Anti putus upgrade** | Full `upgrade` di build-time + helper `safe-upgrade` di dalam sesi (hold CRD/desktop/systemd) |
+| 📌 **Shortcut desktop** | Antigravity, VS Code, Files, Terminal, OpenCode, Safe Upgrade |
 
 ![Server room](https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1200&q=80)
 
@@ -78,9 +79,10 @@ flowchart LR
 |---|---|---|
 | Tampilan | Klasik elegan ala Linux Mint | Modern ala Ubuntu |
 | Ukuran install | ± 1 GB | ± 2 GB |
-| Session CRD | `exec /etc/X11/Xsession cinnamon-session-cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /etc/X11/Xsession "gnome-session"` |
+| Session CRD | `exec /usr/bin/cinnamon-session --session cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /usr/bin/gnome-session --session=ubuntu` + `LIBGL_ALWAYS_SOFTWARE=1` |
 | Display manager | ❌ Tidak dipakai (headless) | ❌ Tidak dipakai (headless) |
-| Screensaver | Dihapus (`cinnamon-screensaver`) + dconf no-lock | Default GNOME |
+| Screensaver/lock/suspend | Disabled (autostart + dconf no-lock, paket tetap terinstall) | Disabled (dconf + gsettings no-lock, suspend `nothing`) |
+| Upgrade | Build-time full upgrade + `safe-upgrade` di sesi | Build-time full upgrade + `safe-upgrade` di sesi |
 | Cocok untuk | Pecinta tampilan Mint, lebih ringan | Kestabilan maksimal |
 
 ---
@@ -91,18 +93,47 @@ Gejala: PIN benar dan connect berhasil, tapi layar menampilkan wajah sedih + tom
 
 **Penyebab:** session file memakai `lightdm-session` wrapper yang butuh seat LightDM fisik — tidak ada di runner headless CRD.
 
-**Solusi yang sudah diterapkan di `cinnamon.yml`:**
+**Solusi yang sudah diterapkan (`cinnamon.yml` / `gnome.yml`):**
 
 ```bash
+# Cinnamon
 DESKTOP_SESSION=cinnamon
 XDG_CURRENT_DESKTOP=X-Cinnamon
 XDG_SESSION_TYPE=x11
 XDG_RUNTIME_DIR=/run/user/$(id -u)
 LIBGL_ALWAYS_SOFTWARE=1
-exec /etc/X11/Xsession cinnamon-session-cinnamon
+exec /usr/bin/cinnamon-session --session cinnamon
+
+# GNOME (auto-deteksi ubuntu > gnome > gnome-xorg)
+DESKTOP_SESSION=ubuntu
+XDG_CURRENT_DESKTOP=ubuntu:GNOME
+XDG_SESSION_TYPE=x11
+XDG_RUNTIME_DIR=/run/user/$(id -u)
+LIBGL_ALWAYS_SOFTWARE=1
+MUTTER_DEBUG_FORCE_SOFTWARE_RENDER=1
+exec /usr/bin/gnome-session --session=ubuntu
 ```
 
-Plus: paket Mesa/LLVMPipe untuk software rendering + hapus instalasi LightDM yang konflik.
+Plus: paket Mesa/LLVMPipe untuk software rendering, tanpa instalasi LightDM yang konflik.
+
+---
+
+## ⚠️ Jangan `apt upgrade` polos di dalam sesi (bikin putus CRD)
+
+Gejala: setelah `sudo apt update && sudo apt upgrade -y`, sesi tiba-tiba putus dan tidak bisa konek ulang. Di log terlihat systemd me-restart sesuatu.
+
+**Penyebab:** `upgrade` ikut menaikkan `chrome-remote-desktop` / `gnome-shell` / `mutter` / `gdm3` / `systemd` / `dbus`, lalu service-nya di-restart → session X mati di tengah jalan.
+
+**Aturan pakai:**
+
+| Kebutuhan | Cara |
+|---|---|
+| Upgrade harian yang aman (di terminal CRD) | `safe-upgrade` (hold otomatis paket kritis, upgrade sisanya) |
+| Cek dulu tanpa mengubah apa pun | `safe-upgrade --check` |
+| Upgrade CRD/Chrome/GNOME juga (SESI AKAN PUTUS) | `safe-upgrade --allow-crd-restart` / `safe-upgrade --include-desktop` |
+| Dapat upgrade kritis tanpa putus | Re-run workflow Actions (sudah full `upgrade` di build-time, sebelum CRD jalan) |
+
+> Lihat implementasi: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh). Workflow juga memasang shortcut Desktop **Safe Upgrade** + MOTD warning.
 
 ---
 
@@ -114,6 +145,8 @@ rich-linux-crd/
 │   └── workflows/
 │       ├── cinnamon.yml   # 🟢 RICH LINUX (Cinnamon + CRD)
 │       └── gnome.yml      # 🔵 RICH LINUX (GNOME + CRD)
+├── scripts/
+│   └── safe-upgrade.sh  # 🔒 upgrade aman di dalam sesi CRD (pengganti apt upgrade)
 ├── README.md
 ├── LICENSE
 └── .gitignore

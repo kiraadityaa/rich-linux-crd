@@ -352,16 +352,21 @@ jobs:
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Disabling Cinnamon screensaver persistently (no dbus-launch)...${C_NC}"
-          # Hapus autostart screensaver agar tidak mengunci session CRD headless
+          echo -e "${C_YELLOW}[INFO] NOTE: jangan apt-get remove cinnamon-screensaver - itu ikut mencopot paket 'cinnamon' (dependency). Disable saja.${C_NC}"
+          # Non-destruktif: cegah autostart screensaver agar tidak mengunci session CRD headless.
+          # (Paketnya tetap terinstall supaya dependency 'cinnamon' tidak ikut terhapus.)
           sudo rm -f /etc/xdg/autostart/cinnamon-screensaver.desktop || true
           sudo -u runner mkdir -p /home/runner/.config/autostart || true
           sudo -u runner bash -c 'echo "Hidden=true" > /home/runner/.config/autostart/cinnamon-screensaver.desktop' || true
-          sudo apt-get remove -y cinnamon-screensaver || true
           # Default dconf system-wide: no idle, no lock
           sudo mkdir -p /etc/dconf/db/local.d || true
           echo -e "[org/cinnamon/desktop/session]\nidle-delay=0\n[org/cinnamon/desktop/screensaver]\nlock-enabled=false\nidle-activation-enabled=false\n[org/gnome/desktop/session]\nidle-delay=0" | sudo tee /etc/dconf/db/local.d/99-crd-no-lock > /dev/null || true
           sudo dconf update || true
           sudo chown -R runner:runner /home/runner/.config || true
+
+          echo -e "${C_YELLOW}[INFO] Guard: pastikan paket 'cinnamon' masih utuh setelah disable...${C_NC}"
+          command -v cinnamon || { echo -e "${C_RED}[FAIL] binary 'cinnamon' hilang setelah STEP 10!${C_NC}"; exit 1; }
+          test -x /usr/bin/cinnamon-session || { echo -e "${C_RED}[FAIL] /usr/bin/cinnamon-session hilang setelah STEP 10!${C_NC}"; exit 1; }
 
           echo -e "${C_GREEN}[OK] Screensaver and lock disabled.${C_NC}"
 

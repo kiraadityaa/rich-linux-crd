@@ -15,6 +15,9 @@ jobs:
 
     steps:
 
+      - name: Checkout repository (for safe-upgrade helper)
+        uses: actions/checkout@v4
+
       # ============================================================
       # PREPARE SYSTEM
       # ============================================================
@@ -24,7 +27,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 01/14] PREPARE SYSTEM${C_NC}"
+          echo -e "${C_CYAN}[STEP 01/16] PREPARE SYSTEM${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Updating package lists...${C_NC}"
@@ -39,6 +42,13 @@ jobs:
 
           sudo apt-get autoremove -y || true
 
+          # Full upgrade di BUILD-TIME (aman, sebelum CRD/session jalan).
+          # Jangan `apt upgrade` manual dari dalam sesi CRD — itu me-restart
+          # chrome-remote-desktop/gnome-shell/systemd dan memutus sesi.
+          # Untuk upgrade dari dalam sesi, pakai `safe-upgrade` (scripts/safe-upgrade.sh).
+          echo -e "${C_YELLOW}[INFO] Full upgrade at build-time...${C_NC}"
+          sudo NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+
           echo -e "${C_GREEN}[OK] System prepared.${C_NC}"
 
 
@@ -51,7 +61,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 02/14] INSTALL GNOME DESKTOP${C_NC}"
+          echo -e "${C_CYAN}[STEP 02/16] INSTALL GNOME DESKTOP${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Installing full GNOME desktop (approx 2GB, please wait)...${C_NC}"
@@ -89,7 +99,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 03/14] SETUP REMOTE USER${C_NC}"
+          echo -e "${C_CYAN}[STEP 03/16] SETUP REMOTE USER${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Creating user 'runner'...${C_NC}"
@@ -118,7 +128,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 04/14] INSTALL GOOGLE CHROME${C_NC}"
+          echo -e "${C_CYAN}[STEP 04/16] INSTALL GOOGLE CHROME${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Downloading Google Chrome stable...${C_NC}"
@@ -143,7 +153,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 05/14] INSTALL VS CODE${C_NC}"
+          echo -e "${C_CYAN}[STEP 05/16] INSTALL VS CODE${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Adding Microsoft repository...${C_NC}"
@@ -172,7 +182,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 06/14] INSTALL OPENCODE CLI${C_NC}"
+          echo -e "${C_CYAN}[STEP 06/16] INSTALL OPENCODE CLI${C_NC}"
           echo "------------------------------------------------------------"
 
           sudo apt-get update
@@ -206,7 +216,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 07/14] INSTALL OPENCODE DESKTOP${C_NC}"
+          echo -e "${C_CYAN}[STEP 07/16] INSTALL OPENCODE DESKTOP${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Downloading OpenCode Desktop (.deb latest)...${C_NC}"
@@ -236,7 +246,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 08/14] INSTALL CHROME REMOTE DESKTOP${C_NC}"
+          echo -e "${C_CYAN}[STEP 08/16] INSTALL CHROME REMOTE DESKTOP${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Adding Google CRD repository...${C_NC}"
@@ -259,21 +269,61 @@ jobs:
 
 
       # ============================================================
-      # CONFIGURE GNOME SESSION
+      # CONFIGURE GNOME SESSION (CRD HEADLESS, ROBUST — NO FRAGILE XSESSION WRAPPER)
+      # Pelajaran dari `apt upgrade` memutus sesi + error lightdm/Xsession:
+      # panggil /usr/bin/gnome-session via absolute path + env eksplisit,
+      # samakan ketahanan dengan cinnamon.yml (direct exec + software rendering).
       # ============================================================
       - name: Configure CRD GNOME Session
         run: |
-          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_RED='\033[1;31m'; C_NC='\033[0m'
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 09/14] CONFIGURE GNOME SESSION${C_NC}"
+          echo -e "${C_CYAN}[STEP 09/16] CONFIGURE GNOME SESSION${C_NC}"
           echo "------------------------------------------------------------"
 
-          echo -e "${C_YELLOW}[INFO] Writing .chrome-remote-desktop-session...${C_NC}"
-          sudo -u runner bash -c 'cat > /home/runner/.chrome-remote-desktop-session <<EOF
-          exec /etc/X11/Xsession "gnome-session"
-          EOF'
+          echo -e "${C_YELLOW}[INFO] Detecting available GNOME session...${C_NC}"
+          ls /usr/share/xsessions/*.desktop || true
+          grep -h "^Exec=" /usr/share/xsessions/*.desktop || true
+          ls -l /usr/bin/gnome-session* || true
+          ls /usr/share/gnome-session/sessions/ || true
+
+          echo -e "${C_YELLOW}[INFO] Fail-fast: binary wajib harus ada...${C_NC}"
+          test -x /usr/bin/gnome-session || { echo -e "${C_RED}[FAIL] /usr/bin/gnome-session missing.${C_NC}"; exit 1; }
+
+          # Pilih nama session yang benar-benar ada: ubuntu > gnome > gnome-xorg.
+          GNOME_SESSION_NAME=""
+          if [ -f /usr/share/gnome-session/sessions/ubuntu.session ]; then
+            GNOME_SESSION_NAME="ubuntu"
+          elif [ -f /usr/share/gnome-session/sessions/gnome.session ]; then
+            GNOME_SESSION_NAME="gnome"
+          elif [ -f /usr/share/gnome-session/sessions/gnome-xorg.session ]; then
+            GNOME_SESSION_NAME="gnome-xorg"
+          else
+            echo -e "${C_RED}[FAIL] tidak ada *.session yang dikenal di /usr/share/gnome-session/sessions/.${C_NC}"
+            ls /usr/share/gnome-session/sessions/ || true
+            exit 1
+          fi
+          echo -e "${C_YELLOW}[INFO] Using gnome-session --session=$GNOME_SESSION_NAME${C_NC}"
+
+          RUNNER_UID=$(id -u runner)
+          echo -e "${C_YELLOW}[INFO] runner UID=$RUNNER_UID${C_NC}"
+          sudo mkdir -p "/run/user/$RUNNER_UID"
+          sudo chown runner:runner "/run/user/$RUNNER_UID"
+          sudo chmod 700 "/run/user/$RUNNER_UID"
+
+          echo -e "${C_YELLOW}[INFO] Writing .chrome-remote-desktop-session (direct absolute-path exec)...${C_NC}"
+          sudo -u runner tee /home/runner/.chrome-remote-desktop-session > /dev/null <<EOF
+          export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+          DESKTOP_SESSION=$GNOME_SESSION_NAME
+          XDG_CURRENT_DESKTOP=ubuntu:GNOME
+          XDG_SESSION_TYPE=x11
+          XDG_RUNTIME_DIR=/run/user/$RUNNER_UID
+          LIBGL_ALWAYS_SOFTWARE=1
+          MUTTER_DEBUG_FORCE_SOFTWARE_RENDER=1
+          exec /usr/bin/gnome-session --session=$GNOME_SESSION_NAME
+          EOF
 
           sudo chown runner:runner \
             /home/runner/.chrome-remote-desktop-session
@@ -281,7 +331,102 @@ jobs:
           sudo chmod +x \
             /home/runner/.chrome-remote-desktop-session
 
-          echo -e "${C_GREEN}[OK] GNOME session configured for CRD.${C_NC}"
+          echo "------------------------------------------------------------"
+          cat /home/runner/.chrome-remote-desktop-session || true
+          echo "------------------------------------------------------------"
+          echo -e "${C_YELLOW}[INFO] Final check: no Xsession/lightdm wrapper allowed...${C_NC}"
+          if grep -q "Xsession\|lightdm" /home/runner/.chrome-remote-desktop-session; then
+            echo -e "${C_RED}[FAIL] session file masih mengandung Xsession/lightdm.${C_NC}"
+            exit 1
+          fi
+
+          echo -e "${C_GREEN}[OK] GNOME session configured for CRD (session=$GNOME_SESSION_NAME).${C_NC}"
+
+
+      # ============================================================
+      # DISABLE SCREENSAVER + LOCK + SUSPEND (HEADLESS CRD)
+      # Mencegah GNOME mengunci/mematikan layar dan memutus sesi CRD.
+      # ============================================================
+      - name: Disable Screensaver and Lock
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 10/16] DISABLE SCREENSAVER AND LOCK${C_NC}"
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_YELLOW}[INFO] Disabling GNOME lock/suspend system-wide...${C_NC}"
+          sudo mkdir -p /etc/dconf/db/local.d || true
+          sudo tee /etc/dconf/db/local.d/99-crd-no-lock > /dev/null <<'EOF'
+          [org/gnome/desktop/session]
+          idle-delay=0
+          [org/gnome/desktop/screensaver]
+          lock-enabled=false
+          idle-activation-enabled=false
+          lock-delay=0
+          [org/gnome/settings-daemon/plugins/power]
+          sleep-inactive-ac-type='nothing'
+          sleep-inactive-battery-type='nothing'
+          ambient-enabled=false
+          EOF
+          sudo dconf update || true
+
+          # Fallback per-user gsettings (jalan saat sesi aktif; abaikan bila dbus belum ada).
+          sudo -u runner dbus-launch --exit-with-session gsettings set org.gnome.desktop.screensaver lock-enabled false || true
+          sudo -u runner dbus-launch --exit-with-session gsettings set org.gnome.desktop.screensaver idle-activation-enabled false || true
+          sudo -u runner dbus-launch --exit-with-session gsettings set org.gnome.desktop.session idle-delay 0 || true
+          sudo -u runner dbus-launch --exit-with-session gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type 'nothing' || true
+          sudo chown -R runner:runner /home/runner/.config || true
+
+          echo -e "${C_GREEN}[OK] Screensaver, lock, and suspend disabled.${C_NC}"
+
+
+      # ============================================================
+      # INSTALL SAFE-UPGRADE HELPER
+      # Pengganti `sudo apt upgrade` manual yang memutus sesi CRD.
+      # ============================================================
+      - name: Install Safe Upgrade Helper
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 11/16] INSTALL SAFE-UPGRADE HELPER${C_NC}"
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_YELLOW}[INFO] Copying repo scripts/safe-upgrade.sh...${C_NC}"
+          if [ ! -f "$GITHUB_WORKSPACE/scripts/safe-upgrade.sh" ]; then
+            echo -e "${C_RED}[FAIL] scripts/safe-upgrade.sh tidak ditemukan (checkout gagal).${C_NC}"
+            exit 1
+          fi
+          sudo cp "$GITHUB_WORKSPACE/scripts/safe-upgrade.sh" /usr/local/bin/safe-upgrade
+          sudo chmod +x /usr/local/bin/safe-upgrade || true
+          sudo ln -sf /usr/local/bin/safe-upgrade /usr/bin/safe-upgrade || true
+
+          # Shortcut Desktop + MOTD warning agar user tidak `apt upgrade` polos.
+          sudo -u runner bash -c 'cat > /home/runner/Desktop/SafeUpgrade.desktop <<EOF
+          [Desktop Entry]
+          Version=1.0
+          Type=Application
+          Name=Safe Upgrade
+          Comment=Gunakan ini pengganti apt upgrade (anti putus CRD)
+          Exec=gnome-terminal -- bash -c "safe-upgrade; echo; read -n1 -p \"Tekan tombol untuk tutup...\""
+          Icon=system-software-update
+          Terminal=false
+          EOF'
+          sudo chmod +x /home/runner/Desktop/SafeUpgrade.desktop || true
+          sudo chown runner:runner /home/runner/Desktop/SafeUpgrade.desktop || true
+
+          echo 'JANGAN jalankan `sudo apt upgrade -y` polos di sesi CRD (memutus koneksi). Pakai: safe-upgrade' \
+            | sudo tee /etc/motd > /dev/null || true
+
+          echo "------------------------------------------------------------"
+          ls -l /usr/local/bin/safe-upgrade || true
+          safe-upgrade --help || true
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_GREEN}[OK] safe-upgrade installed. Gunakan \`safe-upgrade\` pengganti \`apt upgrade\`.${C_NC}"
 
 
       # ============================================================
@@ -293,7 +438,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 10/14] CREATE DESKTOP SHORTCUTS${C_NC}"
+          echo -e "${C_CYAN}[STEP 12/16] CREATE DESKTOP SHORTCUTS${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Creating Antigravity shortcut...${C_NC}"
@@ -369,7 +514,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 11/14] CONFIGURE CRD PIN${C_NC}"
+          echo -e "${C_CYAN}[STEP 13/16] CONFIGURE CRD PIN${C_NC}"
           echo "------------------------------------------------------------"
 
           if [ -n "$CUSTOM_CRD_PIN" ]; then
@@ -405,7 +550,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 12/14] REGISTER CHROME REMOTE DESKTOP${C_NC}"
+          echo -e "${C_CYAN}[STEP 14/16] REGISTER CHROME REMOTE DESKTOP${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Validating host command input...${C_NC}"
@@ -444,15 +589,31 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 13/14] VERIFY INSTALLATION${C_NC}"
+          echo -e "${C_CYAN}[STEP 15/16] VERIFY INSTALLATION${C_NC}"
           echo "------------------------------------------------------------"
 
           echo "::group::[CHECK] System"
           uname -a
           echo "::endgroup::"
 
-          echo "::group::[CHECK] GNOME"
+          echo "::group::[CHECK] GNOME session (robust, no Xsession wrapper)"
           gnome-shell --version || true
+          echo "--- session file ---"
+          cat /home/runner/.chrome-remote-desktop-session || true
+          echo "--- no Xsession/lightdm wrapper allowed ---"
+          grep -r "Xsession\|lightdm" /home/runner/.chrome-remote-desktop-session && echo "[FAIL] session file masih pakai wrapper!" && exit 1 || echo "[OK] session file direct exec, bersih"
+          grep -q "exec /usr/bin/gnome-session --session=" /home/runner/.chrome-remote-desktop-session || { echo "[FAIL] exec line tidak sesuai harapan!"; exit 1; }
+          echo "::endgroup::"
+
+          echo "::group::[CHECK] screensaver/lock disabled"
+          cat /etc/dconf/db/local.d/99-crd-no-lock || true
+          echo "::endgroup::"
+
+          echo "::group::[CHECK] safe-upgrade helper"
+          which safe-upgrade || true
+          ls -l /usr/local/bin/safe-upgrade || true
+          safe-upgrade --help || true
+          ls -l /home/runner/Desktop/SafeUpgrade.desktop || true
           echo "::endgroup::"
 
           echo "::group::[CHECK] Google Chrome"

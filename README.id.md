@@ -156,7 +156,7 @@ rich-linux-crd/
 | Kebutuhan | Cara |
 |---|---|
 | Ganti PIN | Buat secret repo `CRD_PIN` (Settings → Secrets → Actions), minimal 6 digit |
-| Ganti password user `runner` | Edit baris `echo "runner:...` di workflow |
+| Ganti password user `runner` | Edit baris `echo "runner:...` di workflow. Default password "root"|
 | Tambah aplikasi | Tambah step `apt-get install` baru sebelum step CRD (needrestart sudah dinonaktifkan, jadi tetap senyap) |
 | Ganti wallpaper | Edit URL download di step **Set Wallpaper** di workflow |
 | Ganti resolusi tampilan | Edit config dummy Xorg dan perintah xrandr di step **Configure CRD Cinnamon Session** (STEP 09) di `cinnamon.yml` |

@@ -18,6 +18,18 @@ jobs:
       - name: Checkout repository (for safe-upgrade helper)
         uses: actions/checkout@v4
 
+      - id: dated
+        run: echo "today=$(date +'%Y%m%d')" >> "$GITHUB_OUTPUT"
+
+      - name: Restore apt package cache (re-run cepat, tak unduh ulang ~GB)
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/apt-archives
+          key: apt-ubuntu-2404-${{ steps.dated.outputs.today }}
+          restore-keys: |
+            apt-ubuntu-2404-
+          save-always: true
+
       # ============================================================
       # PREPARE SYSTEM
       # ============================================================
@@ -55,6 +67,12 @@ jobs:
           Acquire::http::Pipeline-Depth "10";
           Acquire::Languages "none";
           APTEOF
+
+          # Pakai .deb dari cache GitHub (jika ada) agar upgrade/install
+          # tidak mengunduh ulang (hemat ~GB saat re-run setelah gagal register).
+          echo -e "${C_YELLOW}[INFO] Seeding /var/cache/apt/archives from GitHub apt cache...${C_NC}"
+          sudo mkdir -p /var/cache/apt/archives/partial
+          sudo cp -a /home/runner/apt-archives/. /var/cache/apt/archives/ 2>/dev/null || true
 
           echo -e "${C_YELLOW}[INFO] Updating package lists...${C_NC}"
           sudo apt-get update
@@ -358,6 +376,13 @@ jobs:
 
           echo -e "${C_GREEN}[OK] Chrome Remote Desktop installed.${C_NC}"
 
+      # Simpan arsip .deb ke cache GitHub SEKARANG (sebelum register) —
+      # kalau STEP 15 gagal & user re-run, install tidak perlu unduh ulang.
+      - name: Sync apt cache for GitHub save
+        run: |
+          sudo mkdir -p /home/runner/apt-archives
+          sudo cp -a /var/cache/apt/archives/. /home/runner/apt-archives/ || true
+          sudo chown -R runner:runner /home/runner/apt-archives || true
 
       # ============================================================
       # CONFIGURE CINNAMON SESSION (CRD HEADLESS, NO LIGHTDM, NO XSESSION WRAPPER)
@@ -699,18 +724,56 @@ jobs:
 
           echo -e "${C_YELLOW}[INFO] Validating host command input...${C_NC}"
 
-          if [ -z "$CRD_COMMAND" ]; then
+          # Bersihkan input: hapus CR/LF ekstra + spasi trailing.
+          CRD_COMMAND_CLEAN="$(printf '%s' "$CRD_COMMAND" | tr -d '\r' | sed 's/[[:space:]]*$//')"
+
+          if [ -z "$CRD_COMMAND_CLEAN" ]; then
             echo -e "${C_RED}[FAIL] CRD host command is empty.${C_NC}"
             exit 1
           fi
+          if ! printf '%s' "$CRD_COMMAND_CLEAN" | grep -q 'start-host'; then
+            echo -e "${C_RED}[FAIL] Input tidak mengandung 'start-host'.${C_NC}"
+            echo -e "${C_RED}       Salin SELURUH perintah Debian Linux dari https://remotedesktop.google.com/headless${C_NC}"
+            exit 1
+          fi
+          if printf '%s' "$CRD_COMMAND_CLEAN" | grep -q -- '--pin'; then
+            echo -e "${C_YELLOW}[WARN] Input sudah mengandung --pin; nilai dari secret/default akan dipakai.${C_NC}"
+          fi
+          echo -e "${C_YELLOW}[INFO] CRD command valid ($(printf '%s' "$CRD_COMMAND_CLEAN" | wc -c) chars, contains start-host).${C_NC}"
 
-          echo -e "${C_YELLOW}[INFO] Registering host as user 'runner'...${C_NC}"
+          echo -e "${C_YELLOW}[INFO] Registering host as user 'runner' (retry 3x jika OAuth transien)...${C_NC}"
 
           # Jalankan command CRD sebagai user runner.
-          # PIN akan diberikan melalui environment CRD_PIN.
-          sudo -u runner \
-            env CRD_PIN="$CRD_PIN" \
-            bash -c "$CRD_COMMAND --pin=\"$CRD_PIN\""
+          # PIN diberikan melalui environment CRD_PIN.
+          # Retry + backoff: auth code Google single-use mudah gagal karena
+          # kadaluarsa/terpakai/transien — terapkan retry sebelum menyerah.
+          rc=1
+          attempt=0
+          while [ "$attempt" -lt 3 ]; do
+            attempt=$((attempt + 1))
+            echo -e "${C_YELLOW}[INFO] Registration attempt ${attempt}/3 ...${C_NC}"
+            if sudo -u runner \
+              env CRD_PIN="$CRD_PIN" \
+              bash -c "$CRD_COMMAND_CLEAN --pin=\"$CRD_PIN\""; then
+              rc=0
+              break
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo -e "${C_YELLOW}[WARN] Registration gagal (mungkin kode single-use kadaluarsa/terpakai, atau error transien). Retry dalam $((attempt * 15))s...${C_NC}"
+              sleep $((attempt * 15))
+            fi
+          done
+
+          if [ "$rc" -ne 0 ]; then
+            echo ""
+            echo -e "${C_RED}[FAIL] Registrasi Chrome Remote Desktop gagal (OAuth error).${C_NC}"
+            echo -e "${C_RED}  Penyebab paling umum: kode auth Google single-use sudah kadaluarsa/terpakai.${C_NC}"
+            echo -e "${C_RED}  Pulih TANPA menunggu install ulang (apt sudah tercache, re-run cepat):${C_NC}"
+            echo -e "${C_RED}  1) Buka https://remotedesktop.google.com/headless${C_NC}"
+            echo -e "${C_RED}  2) Begin -> Next -> Authorize sampai muncul perintah baru.${C_NC}"
+            echo -e "${C_RED}  3) Salin perintah Debian Linux versi BARU, lalu Re-run workflow ini.${C_NC}"
+            exit 1
+          fi
 
           echo ""
           echo "=============================================================="

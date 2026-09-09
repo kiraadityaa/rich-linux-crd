@@ -858,6 +858,7 @@ jobs:
           echo -e "  ${C_YELLOW}[INFO] Keep-alive 6 jam (sleep 21600). Jangan cancel workflow.${C_NC}"
           echo -e "  [INFO] Access : https://remotedesktop.google.com/access"
           echo -e "  [INFO] User   : runner"
+          echo -e "  [INFO] Pass   : root"
           echo -e "  [INFO] Desktop: Cinnamon"
           echo "=============================================================="
 

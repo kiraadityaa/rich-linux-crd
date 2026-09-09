@@ -38,7 +38,7 @@ Image sources: workflow status badges from GitHub Actions, technology badges fro
 | Session length | Automatic keep-alive per workflow run (up to 6 hours) |
 | Crash-resistant session | Direct `exec` without `Xsession`/`lightdm` wrappers + Mesa software rendering (fixes the "Oh no! Something has gone wrong" screen) |
 | Disconnect-safe upgrades | Full `upgrade` at build time + [`safe-upgrade`](scripts/safe-upgrade.sh) helper inside the session (holds CRD/desktop/systemd packages) |
-| Quiet installs | Needrestart apt hook disabled (`/etc/apt/apt.conf.d/20needrestart` removed) → no "Scanning processes..." output and no auto service restarts during any install/upgrade |
+| Quiet installs | Needrestart apt hook disabled (`/etc/apt/apt.conf.d/99needrestart` removed) → no "Scanning processes..." output and no auto service restarts during any install/upgrade |
 | Catppuccin theme + Zafiro icons | Cinnamon workflow auto-extracts `cinnamon-theme.zip` → Catppuccin-B-LB-Dark theme + Zafiro-Nord-Black icon theme, applied via dconf |
 | Auto resolution 1600x1200 | Dual-layer: Xorg dummy config + xrandr auto-detect loop in session file |
 | Audio streaming | Chrome Remote Desktop natively streams audio from the remote session — no extra PulseAudio/PipeWire config needed |

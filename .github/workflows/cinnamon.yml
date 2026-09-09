@@ -36,10 +36,17 @@ jobs:
           # Matikan apt hook needrestart SEBELUM operasi apt apa pun, supaya
           # setiap install/upgrade tidak menampilkan 'Scanning processes...'
           # dan tidak mencoba me-restart service (yang bisa memutus sesi CRD).
+          # Di Ubuntu 24.04 hook asli needrestart ada di 99needrestart
+          # (memanggil /usr/lib/needrestart/apt-pinvoke), bukan 20needrestart
+          # (nama legacy 22.04). Hapus keduanya supaya tidak ada banner
+          # "Scanning processes..." setelah setiap apt install/upgrade,
+          # termasuk dari terminal sesi CRD.
+          sudo rm -f /etc/apt/apt.conf.d/99needrestart || true
           sudo rm -f /etc/apt/apt.conf.d/20needrestart || true
           sudo mkdir -p /etc/needrestart/needrestart.conf.d || true
           echo '$nrconf{restart} = '"'"'l'"'"';' | sudo tee /etc/needrestart/needrestart.conf.d/99-no-restart.conf > /dev/null
           echo '$nrconf{kernelhints} = 0;' | sudo tee -a /etc/needrestart/needrestart.conf.d/99-no-restart.conf > /dev/null
+          echo '$nrconf{check} = 0;' | sudo tee -a /etc/needrestart/needrestart.conf.d/99-no-restart.conf > /dev/null
 
           echo -e "${C_YELLOW}[INFO] Tuning apt for speed (retries, pipelining, minimal index languages)...${C_NC}"
           sudo tee /etc/apt/apt.conf.d/99-speed > /dev/null <<'APTEOF'
@@ -160,6 +167,7 @@ jobs:
 
           echo -e "${C_YELLOW}[INFO] Setting NEEDRESTART_MODE=l for runner (prevents service restart during apt)...${C_NC}"
           echo 'export NEEDRESTART_MODE=l' | sudo tee -a /home/runner/.bashrc > /dev/null
+          echo 'export NEEDRESTART_SUSPEND=1' | sudo tee -a /home/runner/.bashrc > /dev/null
 
           sudo mkdir -p /home/runner/Desktop
 

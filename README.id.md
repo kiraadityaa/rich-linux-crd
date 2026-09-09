@@ -11,10 +11,61 @@
 Dokumen utama (lengkap, dalam Bahasa Inggris): [README.md](README.md). Halaman ini ringkasannya dalam Bahasa Indonesia.
 
 **Fitur cepat:**
-- **Wallpaper Catppuccin Black Unicat** sudah terpasang otomatis di kedua desktop.
+- **Setup 3 langkah, 5 menit** — tanpa SSH, tanpa port forwarding, tanpa firewall. Cukup salin perintah CRD, jalankan workflow, konek dari browser.
+- **Tema Catppuccin + Ikon Zafiro** — workflow Cinnamon otomatis memasang tema Catppuccin-B-LB-Dark dan ikon Zafiro-Nord-Black.
+- **Resolusi otomatis 1600x1200** — xrandr auto-detect tampilan dan menerapkan resolusi optimal.
+- **Audio streaming** — Chrome Remote Desktop menyiarkan audio dari sesi remote ke browser secara otomatis.
 - **Instalasi senyap** — hook needrestart dinonaktifkan, jadi tidak ada log `Scanning processes...` dan tidak ada restart layanan otomatis saat install/upgrade (mencegah sesi CRD putus).
 
 ![Arsitektur: input pengguna mengalir melalui instalasi GitHub Actions dan registrasi CRD ke koneksi browser](assets/architecture.svg)
+
+---
+
+## Fitur Unggulan
+
+### Setup Mudah — 3 Langkah, 5 Menit
+
+Tanpa SSH keys, tanpa port forwarding, tanpa firewall. Cukup salin perintah CRD dari halaman Google, tempel ke workflow GitHub Actions, dan konek dari browser. Seluruh stack — desktop environment, browser, code editor, dan remote access — terinstal otomatis.
+
+### Pengalaman Remote yang Mulus
+
+Sesi Cinnamon dan GNOME dikonfigurasi untuk operasi headless:
+
+- **Direct exec** — session file melewati wrapper LightDM/Xsession yang menyebabkan crash "Oh no! Something has gone wrong"
+- **Mesa software rendering** (`LIBGL_ALWAYS_SOFTWARE=1`) memastikan desktop render dengan benar di GitHub Actions runner tanpa GPU fisik
+- **Screensaver dan lock dinonaktifkan** — sesi tetap hidup dan responsif, tidak pernah timeout atau mengunci Anda keluar
+- **Resolusi otomatis 1600x1200** (Cinnamon) — xrandr auto-detect tampilan dan menerapkan resolusi optimal
+
+### Audio Streaming
+
+Chrome Remote Desktop menyiarkan audio dari sesi remote ke browser secara otomatis. Tidak perlu konfigurasi PulseAudio atau PipeWire — Cinnamon dan GNOME keduanya menggunakan audio stack Ubuntu default, dan CRD menangani sisanya. Putar musik, tonton video, atau ikut video call — audio langsung jalan.
+
+### Tema Catppuccin & Ikon Zafiro (Cinnamon)
+
+Workflow Cinnamon hadir dengan tampilan premium langsung dari awal:
+
+- **Catppuccin-B-LB-Dark** — tema GTK/Cinnamon gelap dengan elemen UI yang halus dan rounded
+- **Zafiro-Nord-Black** — tema ikon flat minimalis berdasarkan palet warna Nord
+- **Wallpaper Catppuccin Black Unicat** — sudah di-set sebagai background desktop
+- Tema dan ikon diterapkan otomatis via dconf, dengan autostart fallback agar persist lintas sesi
+
+### Dev Tools Bawaan
+
+| Tool | Kegunaan |
+|---|---|
+| Google Chrome | Browser lengkap dengan ekstensi, profil, dan DevTools |
+| VS Code | Code editor dengan terminal, ekstensi, dan remote development |
+| OpenCode CLI + Desktop | Asisten coding bertenaga AI |
+
+Semua tool sudah terinstal dan tersedia dari shortcut desktop.
+
+### Upgrade Anti-Putus
+
+Menjalankan `sudo apt upgrade` di dalam sesi CRD memutus koneksi (karena me-restart service CRD/GNOME/systemd). Helper [`safe-upgrade`](scripts/safe-upgrade.sh) menyelesaikan ini:
+
+- Menahan paket kritis (CRD, desktop shell, systemd, kernel)
+- Mengupgrade sisanya dengan aman
+- Shortcut desktop dan MOTD warning mencegah `apt upgrade` yang tidak sengaja
 
 ---
 
@@ -50,11 +101,14 @@ Dokumen utama (lengkap, dalam Bahasa Inggris): [README.md](README.md). Halaman i
 |---|---|---|
 | Tampilan | Klasik ala Linux Mint | Modern ala Ubuntu |
 | Ukuran install | Sekitar 1 GB | Sekitar 2 GB |
+| Tema | Catppuccin-B-LB-Dark + ikon Zafiro-Nord-Black (otomatis) | Adwaita default |
+| Resolusi | Otomatis 1600x1200 via xrandr | Default CRD |
 | Sesi CRD | `exec /usr/bin/cinnamon-session --session cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /usr/bin/gnome-session --session=ubuntu` + `LIBGL_ALWAYS_SOFTWARE=1` |
 | Display manager | Tidak dipakai (headless) | Tidak dipakai (headless) |
 | Screensaver, lock, suspend | Dinonaktifkan | Dinonaktifkan |
 | Wallpaper | Catppuccin Black Unicat (via `org.cinnamon.desktop.background`) | Catppuccin Black Unicat (via `org.gnome.desktop.background`) |
 | Upgrade | Full upgrade di build-time + `safe-upgrade` di sesi | Full upgrade di build-time + `safe-upgrade` di sesi |
+| Cocok untuk | Tampilan ala Mint, ukuran lebih ringan, tema premium | Stabilitas maksimal |
 
 ---
 
@@ -82,14 +136,42 @@ Implementasi: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh).
 
 ```
 rich-linux-crd/
-├── .github/workflows/   # cinnamon.yml, gnome.yml
-├── assets/              # architecture.svg (diagram di README)
-├── scripts/             # safe-upgrade.sh
-├── README.md            # Dokumen utama (Inggris)
-├── README.id.md         # File ini (Indonesia)
+├── .github/workflows/       # cinnamon.yml, gnome.yml
+├── assets/
+│   ├── architecture.svg     # Diagram arsitektur di README
+│   ├── cinnamon-theme.zip   # Tema Catppuccin + ikon Zafiro (otomatis diinstal oleh workflow Cinnamon)
+│   └── rich-linux-crd-banner.svg
+├── scripts/                 # safe-upgrade.sh
+├── README.md                # Dokumen utama (Inggris)
+├── README.id.md             # File ini (Indonesia)
 ├── LICENSE
 └── .gitignore
 ```
+
+---
+
+## Kustomisasi
+
+| Kebutuhan | Cara |
+|---|---|
+| Ganti PIN | Buat secret repo `CRD_PIN` (Settings → Secrets → Actions), minimal 6 digit |
+| Ganti password user `runner` | Edit baris `echo "runner:...` di workflow |
+| Tambah aplikasi | Tambah step `apt-get install` baru sebelum step CRD (needrestart sudah dinonaktifkan, jadi tetap senyap) |
+| Ganti wallpaper | Edit URL download di step **Set Wallpaper** di workflow |
+| Ganti resolusi tampilan | Edit perintah xrandr di `.chrome-remote-desktop-session` (STEP 10) dan config Xorg (STEP 09) |
+| Ganti tema | Ganti `cinnamon-theme.zip` di `assets/` dengan tema Anda sendiri (harus berisi direktori `themes/` dan `icons/`) |
+| Perpanjang durasi | Edit `sleep 21600` di step **Keep Alive** (maks 6 jam karena limit Actions) |
+
+---
+
+## Catatan
+
+- Workflow menggunakan `workflow_dispatch` — hanya berjalan saat Anda menjalankan secara manual.
+- Jangan commit perintah CRD ke repo (berisi kode auth sekali pakai). Cukup tempel ke input workflow.
+- PIN default `123456` hanya untuk kemudahan. Untuk penggunaan serius, buat `CRD_PIN` custom.
+- GitHub Actions free tier punya batas menit bulanan — pantau Settings → Billing.
+- Workflow Cinnamon secara otomatis memasang tema Catppuccin dan ikon Zafiro dari `assets/cinnamon-theme.zip` — tidak perlu setup manual.
+- Resolusi tampilan di-set ke 1600x1200 via xrandr auto-detection di session file Cinnamon.
 
 ---
 

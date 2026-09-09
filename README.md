@@ -17,6 +17,8 @@
   <img src="https://img.shields.io/badge/Chrome_Remote_Desktop-ready-4285F4?style=flat-square&logo=googlechrome&logoColor=white" alt="Chrome Remote Desktop" />
   <img src="https://img.shields.io/badge/VS_Code-included-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code" />
   <img src="https://img.shields.io/badge/OpenCode-included-000000?style=flat-square" alt="OpenCode" />
+  <img src="https://img.shields.io/badge/Theme-Catppuccin-green?style=flat-square" alt="Catppuccin Theme" />
+  <img src="https://img.shields.io/badge/Resolution-1600x1200-blue?style=flat-square" alt="1600x1200" />
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="MIT License" />
 </p>
 
@@ -37,8 +39,61 @@ Image sources: workflow status badges from GitHub Actions, technology badges fro
 | Crash-resistant session | Direct `exec` without `Xsession`/`lightdm` wrappers + Mesa software rendering (fixes the "Oh no! Something has gone wrong" screen) |
 | Disconnect-safe upgrades | Full `upgrade` at build time + [`safe-upgrade`](scripts/safe-upgrade.sh) helper inside the session (holds CRD/desktop/systemd packages) |
 | Quiet installs | Needrestart apt hook disabled (`/etc/apt/apt.conf.d/20needrestart` removed) → no "Scanning processes..." output and no auto service restarts during any install/upgrade |
+| Catppuccin theme + Zafiro icons | Cinnamon workflow auto-extracts `cinnamon-theme.zip` → Catppuccin-B-LB-Dark theme + Zafiro-Nord-Black icon theme, applied via dconf |
+| Auto resolution 1600x1200 | Dual-layer: Xorg dummy config + xrandr auto-detect loop in session file |
+| Audio streaming | Chrome Remote Desktop natively streams audio from the remote session — no extra PulseAudio/PipeWire config needed |
+| Smooth remote experience | Mesa software rendering, direct exec session, disabled screensaver/lock → responsive desktop without crashes |
+| Zero-config setup | 3-step Quick Start: copy CRD command → run workflow → connect with PIN. No SSH, no port forwarding, no firewall config |
 | Wallpaper included | Catppuccin **Black Unicat** preinstalled for the `runner` user on both desktops |
 | Desktop shortcuts | Antigravity, VS Code, Files, Terminal, OpenCode, Safe Upgrade |
+
+---
+
+## Features at a glance
+
+### Easy Setup — 3 Steps, 5 Minutes
+
+No SSH keys, no port forwarding, no firewall rules. Just copy a CRD command from Google's page, paste it into a GitHub Actions workflow, and connect from your browser. The entire stack — desktop environment, browser, code editor, and remote access — installs automatically.
+
+### Smooth Remote Experience
+
+Both Cinnamon and GNOME sessions are configured for headless operation:
+
+- **Direct exec** session files bypass LightDM/Xsession wrappers that cause the "Oh no! Something has gone wrong" crash
+- **Mesa software rendering** (`LIBGL_ALWAYS_SOFTWARE=1`) ensures the desktop renders correctly on GitHub Actions runners without a physical GPU
+- **Screensaver and lock disabled** — the session stays alive and responsive, never timing out or locking you out
+- **Auto resolution 1600x1200** (Cinnamon) — xrandr auto-detects the display and applies the optimal resolution
+
+### Audio Streaming
+
+Chrome Remote Desktop streams audio from the remote session to your browser automatically. No PulseAudio or PipeWire configuration is needed — Cinnamon and GNOME both use the default Ubuntu audio stack, and CRD handles the rest. Play music, watch videos, or join video calls — audio works out of the box.
+
+### Catppuccin Theme & Zafiro Icons (Cinnamon)
+
+The Cinnamon workflow ships with a premium look out of the box:
+
+- **Catppuccin-B-LB-Dark** — a dark GTK/Cinnamon theme with smooth, rounded UI elements
+- **Zafiro-Nord-Black** — a flat, minimal icon theme based on the Nord color palette
+- **Catppuccin Black Unicat** wallpaper — pre-set as the desktop background
+- Theme and icons are applied automatically via dconf, with an autostart fallback to persist across sessions
+
+### Built-in Dev Tools
+
+| Tool | Purpose |
+|---|---|
+| Google Chrome | Full browser with extensions, profiles, and DevTools |
+| VS Code | Code editor with terminal, extensions, and remote development |
+| OpenCode CLI + Desktop | AI-powered coding assistant |
+
+All tools are pre-installed and available from desktop shortcuts.
+
+### Disconnect-Safe Upgrades
+
+Running `sudo apt upgrade` inside a CRD session drops the connection (it restarts CRD/GNOME/systemd services). The [`safe-upgrade`](scripts/safe-upgrade.sh) helper solves this:
+
+- Holds critical packages (CRD, desktop shell, systemd, kernel)
+- Upgrades everything else safely
+- A desktop shortcut and MOTD warning prevent accidental `apt upgrade`
 
 ---
 
@@ -61,7 +116,7 @@ flowchart LR
 
 1. Open <https://remotedesktop.google.com/headless> in a browser logged in to your Google account.
 2. Click **Begin** → **Next** → **Authorize**.
-3. Copy the **Debian Linux** command shown (starts with `DISPLAY= ... start-host ...`). Do not run it locally — just copy it.
+3. Copy the **Debian Linux** command shown (starts with `DISPLAY= ... start-host ...`). Do not run it locally — just copy.
 
 ### 2. Run the workflow
 
@@ -88,12 +143,14 @@ flowchart LR
 |---|---|---|
 | Look and feel | Classic, Linux Mint style | Modern Ubuntu style |
 | Install size | Approx. 1 GB | Approx. 2 GB |
+| Theme | Catppuccin-B-LB-Dark + Zafiro-Nord-Black icons (auto-installed) | Default Adwaita |
+| Resolution | Auto 1600x1200 via xrandr | CRD default |
 | CRD session | `exec /usr/bin/cinnamon-session --session cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /usr/bin/gnome-session --session=ubuntu` + `LIBGL_ALWAYS_SOFTWARE=1` |
 | Display manager | Not used (headless) | Not used (headless) |
 | Screensaver, lock, suspend | Disabled (autostart + dconf no-lock, packages kept installed) | Disabled (dconf + gsettings no-lock, suspend set to `nothing`) |
 | Wallpaper | Catppuccin Black Unicat (via `org.cinnamon.desktop.background`) | Catppuccin Black Unicat (via `org.gnome.desktop.background`) |
 | Upgrades | Build-time full upgrade + `safe-upgrade` in session | Build-time full upgrade + `safe-upgrade` in session |
-| Best for | Mint-style look, lighter footprint | Maximum stability |
+| Best for | Mint-style look, lighter footprint, premium theme | Maximum stability |
 
 ---
 
@@ -158,7 +215,9 @@ rich-linux-crd/
 │       ├── cinnamon.yml   # RICH LINUX (Cinnamon + CRD)
 │       └── gnome.yml      # RICH LINUX (GNOME + CRD)
 ├── assets/
-│   └── architecture.svg # Architecture diagram used in this README
+│   ├── architecture.svg        # Architecture diagram used in this README
+│   ├── cinnamon-theme.zip      # Catppuccin theme + Zafiro icons (auto-installed by Cinnamon workflow)
+│   └── rich-linux-crd-banner.svg
 ├── scripts/
 │   └── safe-upgrade.sh  # Safe in-session upgrade (replacement for apt upgrade)
 ├── README.md            # This file (English)
@@ -177,6 +236,8 @@ rich-linux-crd/
 | Change the `runner` user password | Edit the `echo "runner:...` line in the workflow |
 | Add applications | Add a new `apt-get install` step before the CRD step (needrestart is already disabled, so it stays quiet) |
 | Change the wallpaper | Edit the download URL in the **Set Wallpaper** step of the workflow |
+| Change the display resolution | Edit the xrandr commands in `.chrome-remote-desktop-session` (STEP 10) and the Xorg config (STEP 09) |
+| Change the theme | Replace `cinnamon-theme.zip` in `assets/` with your own theme archive (must contain `themes/` and `icons/` directories) |
 | Extend duration | Edit `sleep 21600` in the **Keep Alive** step (max 6 hours due to the Actions limit) |
 
 ---
@@ -187,6 +248,8 @@ rich-linux-crd/
 - Never commit your CRD command to the repository (it contains a one-time auth code). Paste it only into the workflow input.
 - The default PIN `123456` is for convenience only. For serious use, set a custom `CRD_PIN`.
 - The GitHub Actions free tier has monthly minute limits — monitor Settings → Billing.
+- The Cinnamon workflow automatically installs the Catppuccin theme and Zafiro icons from `assets/cinnamon-theme.zip` — no manual setup required.
+- Display resolution is set to 1600x1200 via xrandr auto-detection in the Cinnamon session file.
 
 ---
 

@@ -15,6 +15,9 @@ jobs:
 
     steps:
 
+      - name: Checkout repository (for safe-upgrade helper)
+        uses: actions/checkout@v4
+
       # ============================================================
       # PREPARE SYSTEM
       # ============================================================
@@ -24,7 +27,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 01/15] PREPARE SYSTEM${C_NC}"
+          echo -e "${C_CYAN}[STEP 01/18] PREPARE SYSTEM${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Disabling needrestart entirely (no noisy logs, no auto-restart)...${C_NC}"
@@ -52,6 +55,13 @@ jobs:
 
           sudo apt-get autoremove -y || true
 
+          # Full upgrade di BUILD-TIME (aman, sebelum CRD/session jalan).
+          # Jangan `apt upgrade` manual dari dalam sesi CRD — itu me-restart
+          # chrome-remote-desktop/cinnamon/systemd dan memutus sesi.
+          # Untuk upgrade dari dalam sesi, pakai `safe-upgrade` (scripts/safe-upgrade.sh).
+          echo -e "${C_YELLOW}[INFO] Full upgrade at build-time...${C_NC}"
+          sudo NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+
           echo -e "${C_GREEN}[OK] System prepared.${C_NC}"
 
 
@@ -64,7 +74,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 02/15] INSTALL CINNAMON DESKTOP (FULL)${C_NC}"
+          echo -e "${C_CYAN}[STEP 02/18] INSTALL CINNAMON DESKTOP (FULL)${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Installing full Cinnamon desktop environment...${C_NC}"
@@ -115,7 +125,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 03/15] SETUP REMOTE USER${C_NC}"
+          echo -e "${C_CYAN}[STEP 03/18] SETUP REMOTE USER${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Creating user 'runner'...${C_NC}"
@@ -147,7 +157,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 04/15] INSTALL GOOGLE CHROME${C_NC}"
+          echo -e "${C_CYAN}[STEP 04/18] INSTALL GOOGLE CHROME${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Downloading Google Chrome stable...${C_NC}"
@@ -176,7 +186,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 05/15] INSTALL VS CODE${C_NC}"
+          echo -e "${C_CYAN}[STEP 05/18] INSTALL VS CODE${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Adding Microsoft repository...${C_NC}"
@@ -209,7 +219,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 06/15] INSTALL OPENCODE CLI${C_NC}"
+          echo -e "${C_CYAN}[STEP 06/18] INSTALL OPENCODE CLI${C_NC}"
           echo "------------------------------------------------------------"
 
           sudo apt-get update
@@ -247,7 +257,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 07/15] INSTALL OPENCODE DESKTOP${C_NC}"
+          echo -e "${C_CYAN}[STEP 07/18] INSTALL OPENCODE DESKTOP${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Downloading OpenCode Desktop (.deb latest)...${C_NC}"
@@ -281,7 +291,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 08/15] INSTALL CHROME REMOTE DESKTOP${C_NC}"
+          echo -e "${C_CYAN}[STEP 08/18] INSTALL CHROME REMOTE DESKTOP${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Adding Google CRD repository...${C_NC}"
@@ -320,7 +330,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 09/15] CONFIGURE CINNAMON SESSION${C_NC}"
+          echo -e "${C_CYAN}[STEP 09/18] CONFIGURE CINNAMON SESSION${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Detecting available Cinnamon session...${C_NC}"
@@ -342,7 +352,35 @@ jobs:
           sudo chown runner:runner "/run/user/$RUNNER_UID"
           sudo chmod 700 "/run/user/$RUNNER_UID"
 
-          echo -e "${C_YELLOW}[INFO] Writing .chrome-remote-desktop-session (direct absolute-path exec)...${C_NC}"
+          echo -e "${C_YELLOW}[INFO] Creating Xorg dummy display config (1600x1200)...${C_NC}"
+          sudo mkdir -p /etc/X11/xorg.conf.d
+          sudo tee /etc/X11/xorg.conf.d/10-dummy.conf > /dev/null <<'XORGEOF'
+          Section "Device"
+              Identifier  "Configured Video Device"
+              Driver      "dummy"
+              VideoRam    256000
+          EndSection
+
+          Section "Monitor"
+              Identifier  "Configured Monitor"
+              HorizSync   28.0-80.0
+              VertRefresh 48.0-75.0
+              Modeline    "1600x1200" 129.00 1600 1664 1856 2160 1200 1201 1204 1250 +HSync +VSync
+          EndSection
+
+          Section "Screen"
+              Identifier  "Default Screen"
+              Monitor     "Configured Monitor"
+              Device      "Configured Video Device"
+              DefaultDepth 24
+              SubSection "Display"
+                  Depth   24
+                  Modes   "1600x1200"
+              EndSubSection
+          EndSection
+          XORGEOF
+
+          echo -e "${C_YELLOW}[INFO] Writing .chrome-remote-desktop-session (direct absolute-path exec + xrandr)...${C_NC}"
           sudo -u runner tee /home/runner/.chrome-remote-desktop-session > /dev/null <<EOF
           export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
           export NEEDRESTART_MODE=l
@@ -351,6 +389,16 @@ jobs:
           XDG_SESSION_TYPE=x11
           XDG_RUNTIME_DIR=/run/user/$RUNNER_UID
           LIBGL_ALWAYS_SOFTWARE=1
+
+          # Auto-detect display and set 1600x1200 resolution
+          for DISPLAY_NUM in \$(seq 0 5); do
+            if xrandr --display :\${DISPLAY_NUM} 2>/dev/null | grep -q " connected"; then
+              OUTPUT=\$(xrandr --display :\${DISPLAY_NUM} | grep " connected" | awk '{print \$1}')
+              xrandr --display :\${DISPLAY_NUM} --output \${OUTPUT} --mode 1600x1200 2>/dev/null || true
+              break
+            fi
+          done
+
           exec /usr/bin/cinnamon-session --session cinnamon
           EOF
 
@@ -383,7 +431,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 10/15] DISABLE SCREENSAVER AND LOCK${C_NC}"
+          echo -e "${C_CYAN}[STEP 10/18] DISABLE SCREENSAVER AND LOCK${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Disabling Cinnamon screensaver persistently (no dbus-launch)...${C_NC}"
@@ -407,93 +455,100 @@ jobs:
 
 
       # ============================================================
-      # CREATE DESKTOP SHORTCUTS
+      # INSTALL SAFE-UPGRADE HELPER
+      # Pengganti `sudo apt upgrade` manual yang memutus sesi CRD.
       # ============================================================
-      - name: Create Desktop Shortcuts
+      - name: Install Safe Upgrade Helper
         run: |
           C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 11/15] CREATE DESKTOP SHORTCUTS${C_NC}"
+          echo -e "${C_CYAN}[STEP 11/18] INSTALL SAFE-UPGRADE HELPER${C_NC}"
           echo "------------------------------------------------------------"
 
-          echo -e "${C_YELLOW}[INFO] Creating Antigravity shortcut...${C_NC}"
-          sudo -u runner bash -c 'cat > /home/runner/Desktop/Antigravity.desktop <<EOF
-          [Desktop Entry]
-          Version=1.0
-          Type=Application
-          Name=Google Antigravity
-          Comment=Open Google Antigravity
-          Exec=google-chrome --app=https://antigravity.google/ --no-sandbox
-          Icon=google-chrome
-          Terminal=false
-          EOF'
-
-          echo -e "${C_YELLOW}[INFO] Creating VS Code shortcut...${C_NC}"
-          sudo -u runner bash -c 'cat > /home/runner/Desktop/VSCode.desktop <<EOF
-          [Desktop Entry]
-          Version=1.0
-          Type=Application
-          Name=Visual Studio Code
-          Comment=Visual Studio Code
-          Exec=code
-          Icon=code
-          Terminal=false
-          EOF'
-
-          echo -e "${C_YELLOW}[INFO] Creating Nemo shortcut...${C_NC}"
-          sudo -u runner bash -c 'cat > /home/runner/Desktop/Nemo.desktop <<EOF
-          [Desktop Entry]
-          Version=1.0
-          Type=Application
-          Name=Files
-          Comment=Cinnamon file manager
-          Exec=nemo
-          Icon=system-file-manager
-          Terminal=false
-          EOF'
-
-          echo -e "${C_YELLOW}[INFO] Creating Terminal shortcut...${C_NC}"
-          sudo -u runner bash -c 'cat > /home/runner/Desktop/Terminal.desktop <<EOF
-          [Desktop Entry]
-          Version=1.0
-          Type=Application
-          Name=Terminal
-          Comment=Terminal emulator
-          Exec=gnome-terminal
-          Icon=utilities-terminal
-          Terminal=false
-          EOF'
-
-          # OpenCode Desktop (.deb sudah menyediakan .desktop di
-          # /usr/share/applications, tinggal salin ke Desktop).
-          # Fallback: buat manual jika file tidak ditemukan.
-          echo -e "${C_YELLOW}[INFO] Linking OpenCode shortcut...${C_NC}"
-          if ls /usr/share/applications/*opencode*.desktop 1> /dev/null 2>&1; then
-            cp /usr/share/applications/*opencode*.desktop /home/runner/Desktop/ || true
-          else
-            sudo -u runner bash -c 'cat > /home/runner/Desktop/OpenCode.desktop <<EOF
-          [Desktop Entry]
-          Version=1.0
-          Type=Application
-          Name=OpenCode
-          Comment=OpenCode Desktop
-          Exec=opencode-desktop
-          Icon=opencode-desktop
-          Terminal=false
-          EOF'
+          echo -e "${C_YELLOW}[INFO] Copying repo scripts/safe-upgrade.sh...${C_NC}"
+          if [ ! -f "$GITHUB_WORKSPACE/scripts/safe-upgrade.sh" ]; then
+            echo -e "${C_RED}[FAIL] scripts/safe-upgrade.sh tidak ditemukan (checkout gagal).${C_NC}"
+            exit 1
           fi
+          sudo cp "$GITHUB_WORKSPACE/scripts/safe-upgrade.sh" /usr/local/bin/safe-upgrade
+          sudo chmod +x /usr/local/bin/safe-upgrade || true
+          sudo ln -sf /usr/local/bin/safe-upgrade /usr/bin/safe-upgrade || true
 
-          sudo chmod +x /home/runner/Desktop/*.desktop
-
-          sudo chown -R runner:runner /home/runner/Desktop
+          echo 'JANGAN jalankan `sudo apt upgrade -y` polos di sesi CRD (memutus koneksi). Pakai: safe-upgrade' \
+            | sudo tee /etc/motd > /dev/null || true
 
           echo "------------------------------------------------------------"
-          ls -l /home/runner/Desktop/*.desktop || true
+          ls -l /usr/local/bin/safe-upgrade || true
+          safe-upgrade --help || true
           echo "------------------------------------------------------------"
 
-          echo -e "${C_GREEN}[OK] Desktop shortcuts created.${C_NC}"
+          echo -e "${C_GREEN}[OK] safe-upgrade installed. Gunakan \`safe-upgrade\` pengganti \`apt upgrade\`.${C_NC}"
+
+
+      # ============================================================
+      # INSTALL CATPPUCCIN THEME & ZAFIRO ICONS
+      # Extract cinnamon-theme.zip → /usr/share/themes + /usr/share/icons
+      # Apply via dconf system-wide + per-user fallback + autostart
+      # ============================================================
+      - name: Install Catppuccin Theme & Zafiro Icons
+        run: |
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_RED='\033[1;31m'; C_NC='\033[0m'
+
+          echo ""
+          echo "------------------------------------------------------------"
+          echo -e "${C_CYAN}[STEP 12/18] INSTALL CATPPUCCIN THEME & ZAFIRO ICONS${C_NC}"
+          echo "------------------------------------------------------------"
+
+          echo -e "${C_YELLOW}[INFO] Extracting cinnamon-theme.zip to /usr/share/...${C_NC}"
+          if [ ! -f "$GITHUB_WORKSPACE/assets/cinnamon-theme.zip" ]; then
+            echo -e "${C_RED}[FAIL] assets/cinnamon-theme.zip tidak ditemukan (checkout gagal).${C_NC}"
+            exit 1
+          fi
+          sudo unzip -o "$GITHUB_WORKSPACE/assets/cinnamon-theme.zip" \
+            -d /usr/share/ \
+            "themes/*" "icons/*"
+
+          echo -e "${C_YELLOW}[INFO] Verifying extracted files...${C_NC}"
+          test -d /usr/share/themes/Catppuccin-B-LB-Dark || { echo -e "${C_RED}[FAIL] Theme directory not found.${C_NC}"; exit 1; }
+          test -d /usr/share/icons/Zafiro-Nord-Black || { echo -e "${C_RED}[FAIL] Icons directory not found.${C_NC}"; exit 1; }
+          ls /usr/share/themes/Catppuccin-B-LB-Dark/index.theme || true
+          ls /usr/share/icons/Zafiro-Nord-Black/index.theme || true
+
+          echo -e "${C_YELLOW}[INFO] Applying theme via dconf system-wide...${C_NC}"
+          sudo mkdir -p /etc/dconf/db/local.d
+          sudo tee /etc/dconf/db/local.d/01-theme > /dev/null <<'DCONFEOF'
+          [org/cinnamon/desktop/interface]
+          gtk-theme='Catppuccin-B-LB-Dark'
+          icon-theme='Zafiro-Nord-Black'
+
+          [org/cinnamon/theme]
+          name='Catppuccin-B-LB-Dark'
+          DCONFEOF
+          sudo dconf update || true
+
+          echo -e "${C_YELLOW}[INFO] Applying theme per-user (fallback via dbus-run-session)...${C_NC}"
+          sudo -u runner dbus-run-session -- gsettings set org.cinnamon.desktop.interface gtk-theme 'Catppuccin-B-LB-Dark' || true
+          sudo -u runner dbus-run-session -- gsettings set org.cinnamon.desktop.interface icon-theme 'Zafiro-Nord-Black' || true
+          sudo -u runner dbus-run-session -- gsettings set org.cinnamon.theme name 'Catppuccin-B-LB-Dark' || true
+
+          echo -e "${C_YELLOW}[INFO] Creating autostart fallback for theme persistence...${C_NC}"
+          sudo -u runner mkdir -p /home/runner/.config/autostart
+          sudo -u runner bash -c 'cat > /home/runner/.config/autostart/set-theme.desktop <<EOF
+          [Desktop Entry]
+          Type=Application
+          Name=Set Theme
+          Exec=sh -c "sleep 3; gsettings set org.cinnamon.desktop.interface gtk-theme \"Catppuccin-B-LB-Dark\"; gsettings set org.cinnamon.desktop.interface icon-theme \"Zafiro-Nord-Black\"; gsettings set org.cinnamon.theme name \"Catppuccin-B-LB-Dark\""
+          X-GNOME-Autostart-enabled=true
+          Terminal=false
+          EOF'
+
+          echo "------------------------------------------------------------"
+          ls -d /usr/share/themes/Catppuccin-B-LB-Dark/ || true
+          ls -d /usr/share/icons/Zafiro-Nord-Black/ || true
+          echo "------------------------------------------------------------"
+          echo -e "${C_GREEN}[OK] Catppuccin-B-LB-Dark theme + Zafiro-Nord-Black icons installed.${C_NC}"
 
 
       # ============================================================
@@ -505,7 +560,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 12/15] SET WALLPAPER${C_NC}"
+          echo -e "${C_CYAN}[STEP 13/18] SET WALLPAPER${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Downloading Catppuccin 'black unicat' wallpaper...${C_NC}"
@@ -560,7 +615,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 13/15] CONFIGURE CRD PIN${C_NC}"
+          echo -e "${C_CYAN}[STEP 14/18] CONFIGURE CRD PIN${C_NC}"
           echo "------------------------------------------------------------"
 
           if [ -n "$CUSTOM_CRD_PIN" ]; then
@@ -596,7 +651,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 14/15] REGISTER CHROME REMOTE DESKTOP${C_NC}"
+          echo -e "${C_CYAN}[STEP 15/18] REGISTER CHROME REMOTE DESKTOP${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Validating host command input...${C_NC}"
@@ -636,7 +691,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 15/15] VERIFY INSTALLATION${C_NC}"
+          echo -e "${C_CYAN}[STEP 16/18] VERIFY INSTALLATION${C_NC}"
           echo "------------------------------------------------------------"
 
           echo "::group::[CHECK] System"
@@ -680,7 +735,24 @@ jobs:
           echo "::group::[CHECK] OpenCode Desktop"
           dpkg -l | grep -i opencode || true
           ls /usr/share/applications/*opencode* || true
-          ls /home/runner/Desktop/*pencode*.desktop || true
+          echo "::endgroup::"
+
+          echo "::group::[CHECK] safe-upgrade helper"
+          which safe-upgrade || true
+          ls -l /usr/local/bin/safe-upgrade || true
+          safe-upgrade --help || true
+          echo "::endgroup::"
+
+          echo "::group::[CHECK] Catppuccin Theme & Zafiro Icons"
+          ls -d /usr/share/themes/Catppuccin-B-LB-Dark/ || true
+          ls /usr/share/themes/Catppuccin-B-LB-Dark/index.theme || true
+          ls -d /usr/share/icons/Zafiro-Nord-Black/ || true
+          ls /usr/share/icons/Zafiro-Nord-Black/index.theme || true
+          cat /etc/dconf/db/local.d/01-theme || true
+          echo "::endgroup::"
+
+          echo "::group::[CHECK] Resolution config (Xorg dummy)"
+          cat /etc/X11/xorg.conf.d/10-dummy.conf || true
           echo "::endgroup::"
 
           echo "::group::[CHECK] Chrome Remote Desktop service"

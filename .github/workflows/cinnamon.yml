@@ -30,6 +30,8 @@ jobs:
           echo -e "${C_CYAN}[STEP 01/18] PREPARE SYSTEM${C_NC}"
           echo "------------------------------------------------------------"
 
+          __prepare_start=$(date +%s)
+
           echo -e "${C_YELLOW}[INFO] Disabling needrestart entirely (no noisy logs, no auto-restart)...${C_NC}"
           # Matikan apt hook needrestart SEBELUM operasi apt apa pun, supaya
           # setiap install/upgrade tidak menampilkan 'Scanning processes...'
@@ -39,11 +41,26 @@ jobs:
           echo '$nrconf{restart} = '"'"'l'"'"';' | sudo tee /etc/needrestart/needrestart.conf.d/99-no-restart.conf > /dev/null
           echo '$nrconf{kernelhints} = 0;' | sudo tee -a /etc/needrestart/needrestart.conf.d/99-no-restart.conf > /dev/null
 
+          echo -e "${C_YELLOW}[INFO] Tuning apt for speed (retries, pipelining, minimal index languages)...${C_NC}"
+          sudo tee /etc/apt/apt.conf.d/99-speed > /dev/null <<'APTEOF'
+          Acquire::Retries "5";
+          Acquire::http::Timeout "60";
+          Acquire::http::Pipeline-Depth "10";
+          Acquire::Languages "none";
+          APTEOF
+
           echo -e "${C_YELLOW}[INFO] Updating package lists...${C_NC}"
           sudo apt-get update
 
           echo -e "${C_YELLOW}[INFO] Enabling universe repository (needed for Cinnamon)...${C_NC}"
-          sudo add-apt-repository -y universe || true
+          # Pada runner ubuntu-24.04 GitHub, universe sudah aktif default di
+          # /etc/apt/sources.list.d/ubuntu.sources (main/restricted/universe/multiverse).
+          # Lewati add-apt-repository jika sudah ada agar tidak ada apt-get update no-op.
+          if grep -q "universe" /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || grep -q "universe" /etc/apt/sources.list 2>/dev/null; then
+            echo -e "[INFO] universe already enabled — skipping add-apt-repository."
+          else
+            sudo add-apt-repository -y universe
+          fi
           sudo apt-get update
 
           echo -e "${C_YELLOW}[INFO] Removing unnecessary packages...${C_NC}"
@@ -59,10 +76,13 @@ jobs:
           # Jangan `apt upgrade` manual dari dalam sesi CRD — itu me-restart
           # chrome-remote-desktop/cinnamon/systemd dan memutus sesi.
           # Untuk upgrade dari dalam sesi, pakai `safe-upgrade` (scripts/safe-upgrade.sh).
-          echo -e "${C_YELLOW}[INFO] Full upgrade at build-time...${C_NC}"
-          sudo NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+          echo -e "${C_YELLOW}[INFO] Full upgrade at build-time (fast unpack, no dpkg fsync)...${C_NC}"
+          sudo NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
+            -o Dpkg::Options::="--force-unsafe-io" \
+            -o Dpkg::Use-Pty=0
 
-          echo -e "${C_GREEN}[OK] System prepared.${C_NC}"
+          __prepare_end=$(date +%s)
+          echo -e "${C_GREEN}[OK] System prepared. (Elapsed: $((__prepare_end-__prepare_start))s)${C_NC}"
 
 
       # ============================================================

@@ -167,6 +167,7 @@ jobs:
             adwaita-icon-theme \
             fonts-cantarell \
             nemo \
+            obs-studio \
             gnome-terminal
 
           sudo rm -f /etc/apt/preferences.d/99-no-noto-heavy
@@ -206,7 +207,7 @@ jobs:
             -s /bin/bash \
             runner || true
 
-          echo "runner:Antigravity2026!" | sudo chpasswd
+          echo "runner:root" | sudo chpasswd
 
           sudo usermod -aG sudo runner
 

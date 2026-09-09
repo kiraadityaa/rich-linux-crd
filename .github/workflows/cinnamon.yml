@@ -34,25 +34,24 @@ jobs:
       # PREPARE SYSTEM
       # ============================================================
       - name: Prepare System
+        shell: bash
         run: |
+          set -e
+
           C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_RED='\033[1;31m'; C_NC='\033[0m'
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 01/18] PREPARE SYSTEM${C_NC}"
+          echo -e "${C_CYAN}[STEP 01/17] PREPARE SYSTEM${C_NC}"
           echo "------------------------------------------------------------"
 
           __prepare_start=$(date +%s)
 
-          echo -e "${C_YELLOW}[INFO] Disabling needrestart entirely (no noisy logs, no auto-restart)...${C_NC}"
-          # Matikan apt hook needrestart SEBELUM operasi apt apa pun, supaya
-          # setiap install/upgrade tidak menampilkan 'Scanning processes...'
-          # dan tidak mencoba me-restart service (yang bisa memutus sesi CRD).
-          # Di Ubuntu 24.04 hook asli needrestart ada di 99needrestart
-          # (memanggil /usr/lib/needrestart/apt-pinvoke), bukan 20needrestart
-          # (nama legacy 22.04). Hapus keduanya supaya tidak ada banner
-          # "Scanning processes..." setelah setiap apt install/upgrade,
-          # termasuk dari terminal sesi CRD.
+          # Prevent interactive package configuration
+          export DEBIAN_FRONTEND=noninteractive
+          export NEEDRESTART_MODE=l
+
+          echo -e "${C_YELLOW}[INFO] Disabling needrestart (no noisy logs, no auto-restart)...${C_NC}"
           sudo rm -f /etc/apt/apt.conf.d/99needrestart || true
           sudo rm -f /etc/apt/apt.conf.d/20needrestart || true
           sudo mkdir -p /etc/needrestart/needrestart.conf.d || true
@@ -60,51 +59,64 @@ jobs:
           echo '$nrconf{kernelhints} = 0;' | sudo tee -a /etc/needrestart/needrestart.conf.d/99-no-restart.conf > /dev/null
           echo '$nrconf{check} = 0;' | sudo tee -a /etc/needrestart/needrestart.conf.d/99-no-restart.conf > /dev/null
 
-          echo -e "${C_YELLOW}[INFO] Tuning apt for speed (retries, pipelining, minimal index languages)...${C_NC}"
+          echo -e "${C_YELLOW}[INFO] Tuning apt for speed (retries, timeout, no languages)...${C_NC}"
           sudo tee /etc/apt/apt.conf.d/99-speed > /dev/null <<'APTEOF'
           Acquire::Retries "5";
           Acquire::http::Timeout "60";
-          Acquire::http::Pipeline-Depth "10";
           Acquire::Languages "none";
           APTEOF
 
-          # Pakai .deb dari cache GitHub (jika ada) agar upgrade/install
-          # tidak mengunduh ulang (hemat ~GB saat re-run setelah gagal register).
           echo -e "${C_YELLOW}[INFO] Seeding /var/cache/apt/archives from GitHub apt cache...${C_NC}"
           sudo mkdir -p /var/cache/apt/archives/partial
           sudo cp -a /home/runner/apt-archives/. /var/cache/apt/archives/ 2>/dev/null || true
 
-          echo -e "${C_YELLOW}[INFO] Updating package lists...${C_NC}"
-          sudo apt-get update
+          echo -e "${C_YELLOW}[INFO] Cleaning APT cache and package lists...${C_NC}"
+          sudo rm -rf /var/lib/apt/lists/*
+          sudo apt-get clean
+          sudo mkdir -p /var/lib/apt/lists/partial
 
-          echo -e "${C_YELLOW}[INFO] Enabling universe repository (needed for Cinnamon)...${C_NC}"
-          # Pada runner ubuntu-24.04 GitHub, universe sudah aktif default di
-          # /etc/apt/sources.list.d/ubuntu.sources (main/restricted/universe/multiverse).
-          # Lewati add-apt-repository jika sudah ada agar tidak ada apt-get update no-op.
-          if grep -q "universe" /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || grep -q "universe" /etc/apt/sources.list 2>/dev/null; then
-            echo -e "[INFO] universe already enabled — skipping add-apt-repository."
-          else
-            sudo add-apt-repository -y universe
+          echo -e "${C_YELLOW}[INFO] Updating APT repositories...${C_NC}"
+          APT_UPDATED=false
+
+          for attempt in 1 2 3 4 5; do
+            echo -e "${C_CYAN}[INFO] APT update attempt ${attempt}/5...${C_NC}"
+
+            if sudo apt-get update \
+              -o Acquire::Retries=3 \
+              -o Acquire::http::No-Cache=true \
+              -o Acquire::https::No-Cache=true \
+              -o Acquire::http::Pipeline-Depth=0 \
+              -o Acquire::Languages=none; then
+
+              APT_UPDATED=true
+              echo -e "${C_GREEN}[OK] APT repositories updated successfully.${C_NC}"
+              break
+            fi
+
+            echo -e "${C_YELLOW}[WARN] APT update failed. Cleaning lists before retry...${C_NC}"
+            sudo rm -rf /var/lib/apt/lists/*
+            sudo apt-get clean
+            sudo mkdir -p /var/lib/apt/lists/partial
+            sleep 5
+          done
+
+          if [ "$APT_UPDATED" != "true" ]; then
+            echo -e "${C_RED}[ERROR] Failed to update APT repositories after 5 attempts.${C_NC}"
+            exit 1
           fi
-          sudo apt-get update
 
-          echo -e "${C_YELLOW}[INFO] Removing unnecessary packages...${C_NC}"
-          sudo apt-get remove -y --purge \
-            man-db \
-            firewalld \
-            ufw \
-            || true
-
-          sudo apt-get autoremove -y || true
-
-          # Full upgrade di BUILD-TIME (aman, sebelum CRD/session jalan).
-          # Jangan `apt upgrade` manual dari dalam sesi CRD — itu me-restart
-          # chrome-remote-desktop/cinnamon/systemd dan memutus sesi.
-          # Untuk upgrade dari dalam sesi, pakai `safe-upgrade` (scripts/safe-upgrade.sh).
-          echo -e "${C_YELLOW}[INFO] Full upgrade at build-time (fast unpack, no dpkg fsync)...${C_NC}"
-          sudo NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive apt-get upgrade -y \
-            -o Dpkg::Options::="--force-unsafe-io" \
-            -o Dpkg::Use-Pty=0
+          echo -e "${C_YELLOW}[INFO] Installing required packages...${C_NC}"
+          sudo NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive \
+            apt-get install -y \
+            -o Dpkg::Options::="--force-confdef" \
+            -o Dpkg::Options::="--force-confold" \
+            -o Dpkg::Use-Pty=0 \
+            ca-certificates \
+            curl \
+            wget \
+            gnupg \
+            lsb-release \
+            apt-transport-https
 
           __prepare_end=$(date +%s)
           echo -e "${C_GREEN}[OK] System prepared. (Elapsed: $((__prepare_end-__prepare_start))s)${C_NC}"
@@ -119,7 +131,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 02/18] INSTALL CINNAMON DESKTOP (FULL)${C_NC}"
+          echo -e "${C_CYAN}[STEP 02/17] INSTALL CINNAMON DESKTOP (FULL)${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Installing full Cinnamon desktop environment...${C_NC}"
@@ -185,7 +197,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 03/18] SETUP REMOTE USER${C_NC}"
+          echo -e "${C_CYAN}[STEP 03/17] SETUP REMOTE USER${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Creating user 'runner'...${C_NC}"
@@ -218,7 +230,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 04/18] INSTALL GOOGLE CHROME${C_NC}"
+          echo -e "${C_CYAN}[STEP 04/17] INSTALL GOOGLE CHROME${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Downloading Google Chrome stable...${C_NC}"
@@ -239,39 +251,6 @@ jobs:
 
 
       # ============================================================
-      # INSTALL VS CODE
-      # ============================================================
-      - name: Install VS Code
-        run: |
-          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
-
-          echo ""
-          echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 05/18] INSTALL VS CODE${C_NC}"
-          echo "------------------------------------------------------------"
-
-          echo -e "${C_YELLOW}[INFO] Adding Microsoft repository...${C_NC}"
-          wget -qO- \
-            https://packages.microsoft.com/keys/microsoft.asc \
-            | gpg --dearmor \
-            | sudo tee /etc/apt/keyrings/packages.microsoft.gpg > /dev/null
-
-          echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" \
-            | sudo tee /etc/apt/sources.list.d/vscode.list > /dev/null
-
-          sudo apt-get update
-
-          echo -e "${C_YELLOW}[INFO] Installing VS Code...${C_NC}"
-          sudo NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive apt-get install -y \
-            -o Dpkg::Options::="--force-confdef" \
-            -o Dpkg::Options::="--force-confold" \
-            -o Dpkg::Use-Pty=0 \
-            code
-
-          echo -e "${C_GREEN}[OK] VS Code installed: $(code --version | head -n 1)${C_NC}"
-
-
-      # ============================================================
       # INSTALL OPENCODE CLI
       # ============================================================
       - name: Install OpenCode CLI
@@ -280,16 +259,8 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 06/18] INSTALL OPENCODE CLI${C_NC}"
+          echo -e "${C_CYAN}[STEP 05/17] INSTALL OPENCODE CLI${C_NC}"
           echo "------------------------------------------------------------"
-
-          sudo apt-get update
-
-          sudo apt-get install -y \
-            -o Dpkg::Options::="--force-confdef" \
-            -o Dpkg::Options::="--force-confold" \
-            -o Dpkg::Use-Pty=0 \
-            curl
 
           # NOTE: installer opencode.ai/install mengabaikan
           # OPENCODE_INSTALL_DIR dan selalu install ke $HOME/.opencode/bin.
@@ -318,7 +289,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 07/18] INSTALL OPENCODE DESKTOP${C_NC}"
+          echo -e "${C_CYAN}[STEP 06/17] INSTALL OPENCODE DESKTOP${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Downloading OpenCode Desktop (.deb latest)...${C_NC}"
@@ -352,7 +323,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 08/18] INSTALL CHROME REMOTE DESKTOP${C_NC}"
+          echo -e "${C_CYAN}[STEP 07/17] INSTALL CHROME REMOTE DESKTOP${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Adding Google CRD repository...${C_NC}"
@@ -398,7 +369,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 09/18] CONFIGURE CINNAMON SESSION${C_NC}"
+          echo -e "${C_CYAN}[STEP 08/17] CONFIGURE CINNAMON SESSION${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Detecting available Cinnamon session...${C_NC}"
@@ -499,7 +470,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 10/18] DISABLE SCREENSAVER AND LOCK${C_NC}"
+          echo -e "${C_CYAN}[STEP 09/17] DISABLE SCREENSAVER AND LOCK${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Disabling Cinnamon screensaver persistently (no dbus-launch)...${C_NC}"
@@ -532,7 +503,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 11/18] INSTALL SAFE-UPGRADE HELPER${C_NC}"
+          echo -e "${C_CYAN}[STEP 10/17] INSTALL SAFE-UPGRADE HELPER${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Copying repo scripts/safe-upgrade.sh...${C_NC}"
@@ -566,7 +537,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 12/18] INSTALL CATPPUCCIN THEME & ZAFIRO ICONS${C_NC}"
+          echo -e "${C_CYAN}[STEP 11/17] INSTALL CATPPUCCIN THEME & ZAFIRO ICONS${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Extracting cinnamon-theme.zip to /usr/share/...${C_NC}"
@@ -628,7 +599,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 13/18] SET WALLPAPER${C_NC}"
+          echo -e "${C_CYAN}[STEP 12/17] SET WALLPAPER${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Downloading Catppuccin 'black unicat' wallpaper...${C_NC}"
@@ -683,7 +654,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 14/18] CONFIGURE CRD PIN${C_NC}"
+          echo -e "${C_CYAN}[STEP 13/17] CONFIGURE CRD PIN${C_NC}"
           echo "------------------------------------------------------------"
 
           if [ -n "$CUSTOM_CRD_PIN" ]; then
@@ -719,7 +690,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 15/18] REGISTER CHROME REMOTE DESKTOP${C_NC}"
+          echo -e "${C_CYAN}[STEP 14/17] REGISTER CHROME REMOTE DESKTOP${C_NC}"
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Validating host command input...${C_NC}"
@@ -797,7 +768,7 @@ jobs:
 
           echo ""
           echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 16/18] VERIFY INSTALLATION${C_NC}"
+          echo -e "${C_CYAN}[STEP 15/17] VERIFY INSTALLATION${C_NC}"
           echo "------------------------------------------------------------"
 
           echo "::group::[CHECK] System"
@@ -827,10 +798,6 @@ jobs:
 
           echo "::group::[CHECK] Google Chrome"
           google-chrome --version || true
-          echo "::endgroup::"
-
-          echo "::group::[CHECK] VS Code"
-          code --version || true
           echo "::endgroup::"
 
           echo "::group::[CHECK] OpenCode CLI"

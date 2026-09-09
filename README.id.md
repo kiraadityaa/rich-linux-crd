@@ -57,7 +57,7 @@ Workflow Cinnamon hadir dengan tampilan premium langsung dari awal:
 | VS Code | Code editor dengan terminal, ekstensi, dan remote development |
 | OpenCode CLI + Desktop | Asisten coding bertenaga AI |
 
-Semua tool sudah terinstal dan tersedia dari shortcut desktop.
+Semua tool sudah terinstal dan tersedia dari menu aplikasi (Cinnamon) atau shortcut desktop (GNOME).
 
 ### Upgrade Anti-Putus
 
@@ -65,7 +65,7 @@ Menjalankan `sudo apt upgrade` di dalam sesi CRD memutus koneksi (karena me-rest
 
 - Menahan paket kritis (CRD, desktop shell, systemd, kernel)
 - Mengupgrade sisanya dengan aman
-- Shortcut desktop dan MOTD warning mencegah `apt upgrade` yang tidak sengaja
+- MOTD warning di kedua workflow (plus shortcut **Safe Upgrade** di GNOME) mencegah `apt upgrade` yang tidak sengaja
 
 ---
 
@@ -105,6 +105,7 @@ Menjalankan `sudo apt upgrade` di dalam sesi CRD memutus koneksi (karena me-rest
 | Resolusi | Otomatis 1600x1200 via xrandr | Default CRD |
 | Sesi CRD | `exec /usr/bin/cinnamon-session --session cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /usr/bin/gnome-session --session=ubuntu` + `LIBGL_ALWAYS_SOFTWARE=1` |
 | Display manager | Tidak dipakai (headless) | Tidak dipakai (headless) |
+| Shortcut desktop | Tidak ada (desktop bersih) | Antigravity, VS Code, OpenCode, Safe Upgrade |
 | Screensaver, lock, suspend | Dinonaktifkan | Dinonaktifkan |
 | Wallpaper | Catppuccin Black Unicat (via `org.cinnamon.desktop.background`) | Catppuccin Black Unicat (via `org.gnome.desktop.background`) |
 | Upgrade | Full upgrade di build-time + `safe-upgrade` di sesi | Full upgrade di build-time + `safe-upgrade` di sesi |
@@ -158,7 +159,7 @@ rich-linux-crd/
 | Ganti password user `runner` | Edit baris `echo "runner:...` di workflow |
 | Tambah aplikasi | Tambah step `apt-get install` baru sebelum step CRD (needrestart sudah dinonaktifkan, jadi tetap senyap) |
 | Ganti wallpaper | Edit URL download di step **Set Wallpaper** di workflow |
-| Ganti resolusi tampilan | Edit perintah xrandr di `.chrome-remote-desktop-session` (STEP 10) dan config Xorg (STEP 09) |
+| Ganti resolusi tampilan | Edit config dummy Xorg dan perintah xrandr di step **Configure CRD Cinnamon Session** (STEP 09) di `cinnamon.yml` |
 | Ganti tema | Ganti `cinnamon-theme.zip` di `assets/` dengan tema Anda sendiri (harus berisi direktori `themes/` dan `icons/`) |
 | Perpanjang durasi | Edit `sleep 21600` di step **Keep Alive** (maks 6 jam karena limit Actions) |
 

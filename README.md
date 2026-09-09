@@ -45,7 +45,7 @@ Image sources: workflow status badges from GitHub Actions, technology badges fro
 | Smooth remote experience | Mesa software rendering, direct exec session, disabled screensaver/lock → responsive desktop without crashes |
 | Zero-config setup | 3-step Quick Start: copy CRD command → run workflow → connect with PIN. No SSH, no port forwarding, no firewall config |
 | Wallpaper included | Catppuccin **Black Unicat** preinstalled for the `runner` user on both desktops |
-| Desktop shortcuts | Antigravity, VS Code, Files, Terminal, OpenCode, Safe Upgrade |
+| Desktop layout | Cinnamon: clean desktop (no shortcuts) — tools in the app menu; GNOME: shortcuts (Antigravity, VS Code, OpenCode, Safe Upgrade) |
 
 ---
 
@@ -85,7 +85,7 @@ The Cinnamon workflow ships with a premium look out of the box:
 | VS Code | Code editor with terminal, extensions, and remote development |
 | OpenCode CLI + Desktop | AI-powered coding assistant |
 
-All tools are pre-installed and available from desktop shortcuts.
+All tools are pre-installed and available from the application menu (Cinnamon) or desktop shortcuts (GNOME).
 
 ### Disconnect-Safe Upgrades
 
@@ -93,7 +93,7 @@ Running `sudo apt upgrade` inside a CRD session drops the connection (it restart
 
 - Holds critical packages (CRD, desktop shell, systemd, kernel)
 - Upgrades everything else safely
-- A desktop shortcut and MOTD warning prevent accidental `apt upgrade`
+- A MOTD warning in both workflows (plus a **Safe Upgrade** shortcut on GNOME) prevents accidental `apt upgrade`
 
 ---
 
@@ -147,6 +147,7 @@ flowchart LR
 | Resolution | Auto 1600x1200 via xrandr | CRD default |
 | CRD session | `exec /usr/bin/cinnamon-session --session cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /usr/bin/gnome-session --session=ubuntu` + `LIBGL_ALWAYS_SOFTWARE=1` |
 | Display manager | Not used (headless) | Not used (headless) |
+| Desktop shortcuts | None (clean desktop) | Antigravity, VS Code, OpenCode, Safe Upgrade |
 | Screensaver, lock, suspend | Disabled (autostart + dconf no-lock, packages kept installed) | Disabled (dconf + gsettings no-lock, suspend set to `nothing`) |
 | Wallpaper | Catppuccin Black Unicat (via `org.cinnamon.desktop.background`) | Catppuccin Black Unicat (via `org.gnome.desktop.background`) |
 | Upgrades | Build-time full upgrade + `safe-upgrade` in session | Build-time full upgrade + `safe-upgrade` in session |
@@ -202,7 +203,7 @@ Cause: the upgrade also raises `chrome-remote-desktop` / `gnome-shell` / `mutter
 | Get critical upgrades without disconnecting | Re-run the Actions workflow (it already runs a full `upgrade` at build time, before CRD starts) |
 
 > [!TIP]
-> Implementation: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh). The workflow also installs a **Safe Upgrade** desktop shortcut and a MOTD warning.
+> Implementation: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh). The GNOME workflow also installs a **Safe Upgrade** desktop shortcut; both workflows set a MOTD warning.
 
 ---
 
@@ -236,7 +237,7 @@ rich-linux-crd/
 | Change the `runner` user password | Edit the `echo "runner:...` line in the workflow |
 | Add applications | Add a new `apt-get install` step before the CRD step (needrestart is already disabled, so it stays quiet) |
 | Change the wallpaper | Edit the download URL in the **Set Wallpaper** step of the workflow |
-| Change the display resolution | Edit the xrandr commands in `.chrome-remote-desktop-session` (STEP 10) and the Xorg config (STEP 09) |
+| Change the display resolution | Edit the Xorg dummy config and xrandr commands in the **Configure CRD Cinnamon Session** step (STEP 09) of `cinnamon.yml` |
 | Change the theme | Replace `cinnamon-theme.zip` in `assets/` with your own theme archive (must contain `themes/` and `icons/` directories) |
 | Extend duration | Edit `sleep 21600` in the **Keep Alive** step (max 6 hours due to the Actions limit) |
 

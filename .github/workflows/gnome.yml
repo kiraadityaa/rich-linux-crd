@@ -97,6 +97,18 @@ jobs:
           echo "------------------------------------------------------------"
 
           echo -e "${C_YELLOW}[INFO] Installing full GNOME desktop (approx 2GB, please wait)...${C_NC}"
+
+          # Slim font: metapackage fonts-noto merekomendasikan font raksasa
+          # (fonts-noto-cjk 61MB, cjk-extra 145MB, extra 78.5MB) yang tidak
+          # dibutuhkan desktop. Pin negative membuat apt melewatinya
+          # (safe: hanya Recommends, bukan Depends). Pin dihapus lagi setelah
+          # install agar install font di sesi CRD nanti tetap normal.
+          sudo tee /etc/apt/preferences.d/99-no-noto-heavy > /dev/null <<'PREFE'
+          Package: fonts-noto-cjk fonts-noto-cjk-extra fonts-noto-extra
+          Pin: version *
+          Pin-Priority: -1
+          PREFE
+
           sudo NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive apt-get install -y \
             -o Dpkg::Options::="--force-confdef" \
             -o Dpkg::Options::="--force-confold" \
@@ -112,6 +124,9 @@ jobs:
             xorg \
             adwaita-icon-theme \
             fonts-cantarell
+
+          sudo rm -f /etc/apt/preferences.d/99-no-noto-heavy
+          echo -e "${C_GREEN}[OK] Heavy Noto fonts (cjk / cjk-extra / extra) skipped (~285MB saved).${C_NC}"
 
           echo -e "${C_YELLOW}[INFO] Compiling GSettings schemas...${C_NC}"
           sudo glib-compile-schemas /usr/share/glib-2.0/schemas/ || true

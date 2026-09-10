@@ -434,6 +434,7 @@ jobs:
           # CRD selalu start Xorg di display >= 20 (FIRST_X_DISPLAY_NUMBER=20) dan
           # sudah export DISPLAY+XAUTHORITY ke session -> pakai \$DISPLAY,
           # bukan probe :0..:N. Dummy driver mengadvertise mode '1600x1200_60'.
+          sleep 2
           OUTPUT=""
           for DISPLAY_NUM in "\$DISPLAY" :20 :21 :22 :0; do
             OUTPUT=\$(xrandr --display "\$DISPLAY_NUM" 2>/dev/null | grep " connected" | awk '{print \$1}' | head -n1)

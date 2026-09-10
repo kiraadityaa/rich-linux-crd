@@ -16,3 +16,6 @@ Thumbs.db
 
 # Local opencode configuration (may contain API keys)
 .opencode/
+
+# Local instruction file (never commit)
+AGENTS.md

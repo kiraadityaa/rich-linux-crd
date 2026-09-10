@@ -18,6 +18,7 @@ Dokumen utama (lengkap, dalam Bahasa Inggris): [README.md](README.md). Halaman i
 - **Audio streaming** — Chrome Remote Desktop menyiarkan audio dari sesi remote ke browser secara otomatis.
 - **Instalasi senyap** — hook needrestart dinonaktifkan, jadi tidak ada log `Scanning processes...` dan tidak ada restart layanan otomatis saat install/upgrade (mencegah sesi CRD putus).
 - **Tanpa snap** — `snapd` + deb transisi `thunderbird`/`firefox` di-purge dan di-hold, sehingga tidak ada hang "retry 30 menit ke snap store" saat install desktop. Tradeoff: `snap install` dan katalog Snap di GNOME Software tidak tersedia.
+- **XFCE Beta** — desktop ketiga, paling ringan & cepat (`xfce.yml`), memakai runner image **`ubuntu-26.04` public preview**. Label "beta" memang sengaja: image masih preview. KVM di image ini belum terverifikasi → warn-only.
 
 ![Arsitektur: input pengguna mengalir melalui instalasi GitHub Actions dan registrasi CRD ke koneksi browser](assets/architecture.svg)
 
@@ -84,6 +85,16 @@ Keterbatasan yang jujur:
 - Budget vCPU/RAM runner terbatas dan dipakai bersama sesi CRD yang sedang hidup — buat VM dengan ukuran wajar.
 - `/dev/kvm` ada di runner tempat proyek ini dikembangkan, tetapi **tidak semua runner GitHub dijamin punya**. Kalau tidak ada, workflow hanya memberi peringatan (tidak gagal) dan VM akan jatuh ke emulasi QEMU TCG yang lambat.
 
+### XFCE (Beta) — Desktop Paling Cepat
+
+Untuk yang menginginkan responsivitas maksimal, coba workflow XFCE baru. Workflow ini memakai runner image **`ubuntu-26.04` public-preview** dan memasang XFCE + xfwm4 minimal (`xfce4`, `xfce4-session`, `xfwm4`, `xfce4-terminal`, `thunar`) — tanpa beban ekstra seperti obs-studio atau duplikat file manager. Sisanya sama dengan keluarga lainnya: sesi CRD direct-exec, auto-resolusi 1600x1200, safe-upgrade, tanpa snap, dan stack KVM (warn-only bila `/dev/kvm` tidak ada).
+
+Batasan beta yang jujur:
+- Image `ubuntu-26.04` adalah **public preview** GitHub (diluncurkan Juni 2026) — versi tool bisa beda dari 24.04, ada kemungkinan tidak stabil, plus potensi antrean.
+- `/dev/kvm` **belum terverifikasi** di image 26.04; workflow hanya memberi peringatan jika tidak ada.
+- Theming memakai `xfconf` (settings daemon XFCE), bukan dconf/gsettings.
+- Nama perangkat CRD tampil sebagai **"xfce"** di halaman access.
+
 ### Upgrade Anti-Putus
 
 Menjalankan `sudo apt upgrade` di dalam sesi CRD memutus koneksi (karena me-restart service CRD/GNOME/systemd). Helper [`safe-upgrade`](scripts/safe-upgrade.sh) menyelesaikan ini:
@@ -125,6 +136,7 @@ Workflow memakai `workflow_dispatch`, jadi **harus dijalankan dari fork milik An
 2. Pilih workflow:
    - **RICH LINUX (Cinnamon + Chrome Remote Desktop)** → file `.github/workflows/cinnamon.yml`
    - **RICH LINUX (GNOME + Chrome Remote Desktop)** → file `.github/workflows/gnome.yml`
+   - **RICH LINUX (XFCE Beta + Chrome Remote Desktop)** → file `.github/workflows/xfce.yml` (public-preview `ubuntu-26.04`, **beta**)
 3. Klik **Run workflow**, tempel perintah CRD ke field `crd_host_command`, klik **Run**.
 4. Tunggu sekitar 5–10 menit sampai log menampilkan `CHROME REMOTE DESKTOP READY`.
 
@@ -154,6 +166,9 @@ Workflow memakai `workflow_dispatch`, jadi **harus dijalankan dari fork milik An
 | Wallpaper | Catppuccin Black Unicat (via `org.cinnamon.desktop.background`) | Catppuccin Black Unicat (via `org.gnome.desktop.background`) |
 | Upgrade | `safe-upgrade` di sesi (tanpa build-time full upgrade — bisa ditambah via kustomisasi) | Full upgrade di build-time + `safe-upgrade` di sesi |
 | Cocok untuk | Tampilan ala Mint, ukuran lebih ringan, tema premium | Stabilitas maksimal |
+
+> [!NOTE]
+> **XFCE (Beta)** (`xfce.yml`) adalah pilihan desktop ketiga — paling cepat & responsif, memakai image public-preview `ubuntu-26.04`. Detail & batasan jujurnya ada di bagian fitur di atas.
 
 ---
 
@@ -212,7 +227,7 @@ Implementasi: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh). Dilengkapi *
 
 ```
 rich-linux-crd/
-├── .github/workflows/       # cinnamon.yml, gnome.yml
+├── .github/workflows/       # cinnamon.yml, gnome.yml, xfce.yml (XFCE = beta)
 ├── assets/
 │   ├── architecture.svg     # Diagram arsitektur di README
 │   ├── cinnamon-theme.zip   # Tema Catppuccin + ikon Zafiro (otomatis diinstal oleh workflow Cinnamon)
@@ -255,6 +270,7 @@ rich-linux-crd/
 - Resolusi tampilan di-set ke 1600x1200 via xrandr auto-detection di session file (baik Cinnamon maupun GNOME).
 - KVM tersedia di runner GitHub ini (`/dev/kvm`, Intel VT-x, nested = aktif) — dipakai untuk **VM berakselerasi hardware** di dalam desktop. Fitur ini tidak mempercepat rendering CRD itu sendiri, dan ketersediaannya bisa berbeda antar fleet runner GitHub: kalau `/dev/kvm` tidak ada, workflow hanya memperingatkan (tidak gagal) dan VM akan jatuh ke QEMU TCG (lambat).
 - Snap sengaja **dihapus permanen (purge + hold)** di kedua workflow. Alasannya: `thunderbird` di Ubuntu 24.04 adalah *deb transisi* yang post-install-nya memaksa `snap install thunderbird` — di runner tanpa akses store yang baik, ini retry 30 menit dan menahan seluruh install desktop. `snapd`, `thunderbird` (snap-transitional), dan `firefox` di-purge setelah install dan di-hold agar tidak bisa ter-reinstall diam-diam. Tradeoff yang jujur: `snap install` tidak tersedia, Snap Store tidak muncul lagi di GNOME Software (source apt tetap ada), dan `firefox` dicopot — Google Chrome tetap sebagai browser. Kalau butuh browser lain, install Firefox ESR atau Chromium via apt.
+- Workflow **XFCE Beta** (`xfce.yml`) memakai runner image `ubuntu-26.04` yang masih **public preview** (diumumkan Juni 2026). Belum seterbukti workflow 24.04; laporkan masalah ke issue tracker dengan nama workflow `xfce.yml`.
 - `safe-upgrade` menyimpan snapshot versi paket sebelum/sesudah di `/var/log/safe-upgrade-pre.log` dan `/var/log/safe-upgrade-post.log` — diff keduanya untuk melihat perubahan persis.
 
 ---

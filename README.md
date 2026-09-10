@@ -2,7 +2,7 @@
 
 **English** | [Bahasa Indonesia](README.id.md)
 
-> Ubuntu 24.04 on GitHub Actions + Chrome Remote Desktop. Pick your desktop — lightweight **Cinnamon** or stable **GNOME** — and connect from anywhere with a PIN.
+> Ubuntu 24.04/26.04 on GitHub Actions + Chrome Remote Desktop. Pick your desktop — lightweight **Cinnamon**, stable **GNOME**, or ultra-fast **XFCE (Beta)** — and connect from anywhere with a PIN.
 
 <p align="center">
   <img src="assets/rich-linux-crd-banner.svg" alt="RICH Linux CRD banner" width="820" />
@@ -14,6 +14,7 @@
   <img src="https://img.shields.io/badge/Ubuntu-24.04-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt="Ubuntu 24.04" />
   <img src="https://img.shields.io/badge/Cinnamon-Full-success?style=flat-square" alt="Cinnamon" />
   <img src="https://img.shields.io/badge/GNOME-Stable-blue?style=flat-square&logo=gnome&logoColor=white" alt="GNOME" />
+  <img src="https://img.shields.io/badge/XFCE-Beta-orange?style=flat-square&logo=xfce&logoColor=white" alt="XFCE Beta" />
   <img src="https://img.shields.io/badge/Chrome_Remote_Desktop-ready-4285F4?style=flat-square&logo=googlechrome&logoColor=white" alt="Chrome Remote Desktop" />
   <img src="https://img.shields.io/badge/VS_Code-GNOME-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code (GNOME)" />
   <img src="https://img.shields.io/badge/OpenCode-included-000000?style=flat-square" alt="OpenCode" />
@@ -33,7 +34,8 @@ Image sources: workflow status badges from GitHub Actions, technology badges fro
 
 | Feature | Detail |
 |---|---|
-| Two desktops | Cinnamon Full (approx. 1 GB) or GNOME Ubuntu Desktop (approx. 2 GB) |
+| Two desktops | Cinnamon Full (approx. 1 GB), GNOME Ubuntu Desktop (approx. 2 GB), or **XFCE (Beta)** — the lightest, fastest option |
+| XFCE Beta | New workflow `xfce.yml` on the **ubuntu-26.04 public-preview** image — XFCE + xfwm4 for maximum responsiveness (beta: preview image, `/dev/kvm` not yet verified there) |
 | Instant remote access | Chrome Remote Desktop, default PIN `123456` (customizable via secret) |
 | Dev tools included | Google Chrome, OpenCode CLI + OpenCode Desktop (both desktops); **VS Code** pre-installed in GNOME (install manually in Cinnamon via `sudo apt-get install code`) |
 | Session length | Automatic keep-alive per workflow run (up to 6 hours) |
@@ -113,6 +115,16 @@ Honest limitations:
 - The runner's vCPU/RAM budget is shared with your live CRD session — keep VMs modest in size.
 - `/dev/kvm` is present on the runner used to develop this project, but **not every GitHub-hosted runner guarantees it**. If `/dev/kvm` is missing, the workflow only prints a warning (it does not fail) and VMs would fall back to slow QEMU TCG emulation.
 
+### XFCE (Beta) — Fastest Desktop
+
+For users who want maximum responsiveness, try the new XFCE workflow. It runs on the **`ubuntu-26.04` public-preview** runner image and ships a minimal XFCE + xfwm4 desktop (`xfce4`, `xfce4-session`, `xfwm4`, `xfce4-terminal`, `thunar`) — no extra weight such as obs-studio or a file-manager duplicate. Everything else matches the family: direct-exec CRD session, 1600x1200 auto-resolution, safe-upgrade, no snaps, and the KVM stack (warn-only when `/dev/kvm` is unavailable).
+
+Honest beta caveats:
+- The `ubuntu-26.04` image is a GitHub **public preview** (introduced June 2026) — tool versions can differ from 24.04 and individual pieces can be unstable, with possible queueing during capacity ramp-up.
+- `/dev/kvm` is **not yet verified** on the 26.04 image; the workflow degrades to a warning if it is absent.
+- Theming is applied through `xfconf` (XFCE's settings daemon) instead of dconf/gsettings.
+- Start with the CRD device name shown as **"xfce"** in remotedesktop.google.com/access.
+
 ### Disconnect-Safe Upgrades
 
 Running `sudo apt upgrade` inside a CRD session drops the connection (it restarts CRD/GNOME/systemd services). The [`safe-upgrade`](scripts/safe-upgrade.sh) helper solves this:
@@ -167,6 +179,7 @@ Workflows use `workflow_dispatch`, so **you must run them from your own fork** �
 2. Select a workflow:
    - **RICH LINUX (Cinnamon + Chrome Remote Desktop)** → file `.github/workflows/cinnamon.yml`
    - **RICH LINUX (GNOME + Chrome Remote Desktop)** → file `.github/workflows/gnome.yml`
+   - **RICH LINUX (XFCE Beta + Chrome Remote Desktop)** → file `.github/workflows/xfce.yml` (public-preview `ubuntu-26.04`, **beta**)
 3. Click **Run workflow**, paste the CRD command into the `crd_host_command` field, click **Run**.
 4. Wait approx. 5–10 minutes until the log shows `CHROME REMOTE DESKTOP READY`.
 
@@ -197,6 +210,9 @@ Workflows use `workflow_dispatch`, so **you must run them from your own fork** �
 | Wallpaper | Catppuccin Black Unicat (via `org.cinnamon.desktop.background`) | Catppuccin Black Unicat (via `org.gnome.desktop.background`) |
 | Upgrades | `safe-upgrade` in session (no build-time full upgrade — add via customization) | Build-time full upgrade + `safe-upgrade` in session |
 | Best for | Mint-style look, lighter footprint, premium theme | Maximum stability |
+
+> [!NOTE]
+> **XFCE (Beta)** (`xfce.yml`) is the third desktop choice — the fastest/most responsive option. It runs on the public-preview `ubuntu-26.04` image; details and honest beta caveats are in the [XFCE (Beta)](#xfce-beta--fastest-desktop) section.
 
 ---
 
@@ -261,7 +277,8 @@ rich-linux-crd/
 ├── .github/
 │   └── workflows/
 │       ├── cinnamon.yml   # RICH LINUX (Cinnamon + CRD)
-│       └── gnome.yml      # RICH LINUX (GNOME + CRD)
+│       ├── gnome.yml      # RICH LINUX (GNOME + CRD)
+│       └── xfce.yml       # RICH LINUX (XFCE BETA + CRD)
 ├── assets/
 │   ├── architecture.svg        # Architecture diagram used in this README
 │   ├── cinnamon-theme.zip      # Catppuccin theme + Zafiro icons (auto-installed by Cinnamon workflow)
@@ -307,6 +324,7 @@ rich-linux-crd/
 - Display resolution is set to 1600x1200 via xrandr auto-detection in the session file (both Cinnamon and GNOME).
 - KVM is exposed on this GitHub-hosted runner (`/dev/kvm`, Intel VT-x, nested = enabled) — used for **hardware-accelerated VMs** inside the desktop. It does not accelerate the CRD rendering itself, and availability can vary across GitHub runner fleets: if `/dev/kvm` is absent, the workflow only warns (no failure) and VMs would fall back to QEMU TCG (slow).
 - Snap is intentionally **removed and held** in both workflows. The reason: Ubuntu 24.04's `thunderbird` is a *transitional deb* whose post-install script forces `snap install thunderbird` — on a runner without proper snap-store access this retried for 30 minutes, stalling every desktop install. `snapd`, `thunderbird` (snap-transitional), and `firefox` are purged after install and held so nothing can silently reinstall them. Honest tradeoffs: `snap install` is unavailable, the Snap Store no longer appears in GNOME Software (apt sources remain), and `firefox` is removed — Google Chrome stays as the browser. If you ever need a full browser alternative, install Firefox ESR or Chromium via apt.
+- The **XFCE Beta** workflow (`xfce.yml`) uses the `ubuntu-26.04` runner image which is a GitHub **public preview** (announced June 2026). Expect it to be slightly less battle-tested than the 24.04 workflows; report issues to the issue tracker with the workflow name `xfce.yml`.
 - `safe-upgrade` snapshots package versions before/after each run to `/var/log/safe-upgrade-pre.log` and `/var/log/safe-upgrade-post.log` — diff them to inspect exact changes.
 
 ---

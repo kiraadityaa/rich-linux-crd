@@ -247,6 +247,7 @@ rich-linux-crd/
 │                        # --cleanup autoremove, rollback logs, summary table, kernel reboot check
 ├── README.md            # This file (English)
 ├── README.id.md         # Indonesian summary
+├── AGENTS.md            # Agent/dev continuation guide (Bahasa Indonesia)
 ├── LICENSE
 └── .gitignore
 ```

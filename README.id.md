@@ -196,6 +196,7 @@ rich-linux-crd/
 ├── scripts/                 # safe-upgrade.sh (version diff, --cleanup, rollback log, summary, reboot check)
 ├── README.md                # Dokumen utama (Inggris)
 ├── README.id.md             # File ini (Indonesia)
+├── AGENTS.md                # Panduan melanjutkan proyek untuk agent/dev (Bahasa Indonesia)
 ├── LICENSE
 └── .gitignore
 ```

@@ -141,7 +141,14 @@ jobs:
             x11-xserver-utils \
             xorg \
             adwaita-icon-theme \
-            fonts-cantarell
+            fonts-cantarell \
+            qemu-system-x86 \
+            qemu-utils \
+            libvirt-daemon-system \
+            libvirt-clients \
+            virtinst \
+            virt-manager \
+            gnome-boxes
 
           sudo rm -f /etc/apt/preferences.d/99-no-noto-heavy
           echo -e "${C_GREEN}[OK] Heavy Noto fonts (cjk / cjk-extra / extra) skipped (~285MB saved).${C_NC}"
@@ -179,6 +186,16 @@ jobs:
           echo "runner:root" | sudo chpasswd
 
           sudo usermod -aG sudo runner
+
+          echo -e "${C_YELLOW}[INFO] Gibah akses KVM + libvirt ke runner...${C_NC}"
+          sudo usermod -aG kvm runner
+          sudo usermod -aG libvirt runner || true
+          getent group kvm libvirt || true
+          if sudo -u runner test -r /dev/kvm && sudo -u runner test -w /dev/kvm; then
+            echo -e "${C_GREEN}[OK] runner dapat mengakses /dev/kvm (KVM enabled).${C_NC}"
+          else
+            echo -e "${C_YELLOW}[WARN] /dev/kvm belum bisa diakses runner (butuh re-login).${C_NC}"
+          fi
 
           echo -e "${C_YELLOW}[INFO] Setting NEEDRESTART_MODE=l for runner (prevents service restart during apt)...${C_NC}"
           echo 'export NEEDRESTART_MODE=l' | sudo tee -a /home/runner/.bashrc > /dev/null
@@ -872,6 +889,22 @@ jobs:
 
           echo "::group::[CHECK] Remote user"
           id runner
+          echo "::endgroup::"
+
+          echo "::group::[CHECK] KVM / Virtualization"
+          ls -l /dev/kvm || true
+          getent group kvm libvirt || true
+          if sudo -u runner test -r /dev/kvm && sudo -u runner test -w /dev/kvm; then
+            echo -e "${C_GREEN}[OK] runner dapat mengakses /dev/kvm.${C_NC}"
+          else
+            echo -e "${C_RED}[FAIL] runner tidak bisa akses /dev/kvm (grup kvm/libvirt).${C_NC}"
+          fi
+          command -v qemu-system-x86_64 || echo "[WARN] qemu-system-x86_64 missing"
+          command -v virsh || echo "[WARN] virsh missing"
+          command -v virt-manager || echo "[WARN] virt-manager missing"
+          command -v gnome-boxes || echo "[WARN] gnome-boxes missing"
+          systemctl is-enabled libvirtd 2>/dev/null || true
+          systemctl is-active libvirtd 2>/dev/null || true
           echo "::endgroup::"
 
           echo ""

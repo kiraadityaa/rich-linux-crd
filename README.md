@@ -277,6 +277,30 @@ Cause: the upgrade also raises `chrome-remote-desktop` / `gnome-shell` / `mutter
 > [!TIP]
 > Implementation: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh). It ships with a color-coded **summary table**, **version diff** (old → new), **rollback logs** (`/var/log/safe-upgrade-pre.log` & `post.log`), a **kernel reboot check**, and an **interrupt-safe trap** that auto-releases package holds. The GNOME workflow also installs a **Safe Upgrade** desktop shortcut; all three workflows set a MOTD warning.
 
+### virt-manager: "Failed to connect socket to '/var/run/libvirt/libvirt-sock': Permission denied"
+
+Symptom: inside the CRD session, `virt-manager` (or `virsh`) cannot connect to `qemu:///system`, and `test -r /dev/kvm` fails.
+
+Cause: this is **not** a polkit issue — it is a group membership problem. The CRD daemon spawns session processes with the supplementary groups it had **when the daemon started**. If the daemon was already running when `usermod -aG kvm,libvirt runner` ran (e.g. a runner kept alive across workflow re-runs), child processes never receive the `kvm` / `libvirt` groups, so they cannot open the socket `srw-rw---- root:libvirt` or `/dev/kvm` (`crw-rw---- root kvm`).
+
+Fix (already applied in all three workflows): the step that grants the groups also **restarts the CRD daemon** so systemd re-initialises supplementary groups from `/etc/group`:
+
+```bash
+sudo usermod -aG kvm runner || true
+sudo usermod -aG libvirt runner || true
+sudo systemctl restart chrome-remote-desktop@runner || true   # optional if daemon not started yet
+```
+
+Self-check inside a CRD terminal (`id -nG` must list both `kvm` and `libvirt`):
+
+```bash
+id -nG
+virsh -c qemu:///system list --all
+```
+
+> [!NOTE]
+> For a **live** session the same command works, but your connection drops once (reconnect with the PIN). Fresh processes (new terminal, newly launched apps) get the groups after the restart; already-running terminals do not.
+
 ---
 
 ## Repository structure

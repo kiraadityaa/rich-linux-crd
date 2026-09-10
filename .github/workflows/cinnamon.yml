@@ -242,6 +242,11 @@ jobs:
           echo -e "${C_YELLOW}[INFO] Gibah akses KVM + libvirt ke runner...${C_NC}"
           sudo usermod -aG kvm runner || echo -e "${C_YELLOW}[WARN] group 'kvm' tidak ada di runner ini (KVM off).${C_NC}"
           sudo usermod -aG libvirt runner || true
+          # Restart CRD daemon agar systemd re-init supplementary groups (kvm,
+          # libvirt) dari /etc/group. Tanpa ini, daemon yang hidup SEBELUM usermod
+          # mewariskan grup stale ke semua sesi -> virt-manager gagal di
+          # libvirt-sock ("Permission denied") dan /dev/kvm tak terbaca.
+          sudo systemctl restart chrome-remote-desktop@runner 2>/dev/null || true
           getent group kvm libvirt || true
           if sudo -u runner test -r /dev/kvm && sudo -u runner test -w /dev/kvm; then
             echo -e "${C_GREEN}[OK] runner dapat mengakses /dev/kvm (KVM enabled).${C_NC}"

@@ -229,6 +229,30 @@ Penyebab: upgrade ikut menaikkan `chrome-remote-desktop` / `gnome-shell` / `mutt
 
 Implementasi: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh). Dilengkapi **tabel ringkasan** berwarna, **version diff** (lama → baru), **rollback log** (`/var/log/safe-upgrade-pre.log` & `post.log`), **cek reboot kernel**, dan **trap anti-interupsi** yang otomatis melepas hold paket. Workflow GNOME juga memasang shortcut desktop **Safe Upgrade**; ketiga workflow memasang MOTD warning.
 
+### virt-manager: "Failed to connect socket to '/var/run/libvirt/libvirt-sock': Permission denied"
+
+Gejala: di dalam sesi CRD, `virt-manager` (atau `virsh`) tidak bisa connect ke `qemu:///system`, dan `test -r /dev/kvm` gagal.
+
+Penyebab: ini **bukan** masalah polkit — melainkan keanggotaan grup. Daemon CRD me-spawn proses sesi dengan supplementary groups yang dimilikinya **saat daemon start**. Jika daemon sudah berjalan lebih dulu sebelum `usermod -aG kvm,libvirt runner` (mis. runner yang hidup terus lintas re-run workflow), proses turunannya tidak pernah menerima grup `kvm` / `libvirt`, sehingga tidak bisa membuka socket `srw-rw---- root:libvirt` maupun `/dev/kvm` (`crw-rw---- root kvm`).
+
+Perbaikan (sudah diterapkan di ketiga workflow): step pemberi grup kini **me-restart daemon CRD** agar systemd meng-inisialisasi ulang supplementary groups dari `/etc/group`:
+
+```bash
+sudo usermod -aG kvm runner || true
+sudo usermod -aG libvirt runner || true
+sudo systemctl restart chrome-remote-desktop@runner || true   # opsional bila daemon belum jalan
+```
+
+Cek mandiri di dalam terminal CRD (`id -nG` harus memuat `kvm` dan `libvirt`):
+
+```bash
+id -nG
+virsh -c qemu:///system list --all
+```
+
+> [!NOTE]
+> Untuk sesi **live**, perintah yang sama berlaku juga — tetapi koneksi Anda putus sekali (konek ulang dengan PIN). Proses baru (terminal baru, aplikasi yang baru dibuka) mendapatkan grup setelah restart; terminal yang sudah terbuka sebelumnya tidak.
+
 ---
 
 ## Struktur repo

@@ -176,7 +176,7 @@ jobs:
             -s /bin/bash \
             runner || true
 
-          echo "runner:Antigravity2026!" | sudo chpasswd
+          echo "runner:root" | sudo chpasswd
 
           sudo usermod -aG sudo runner
 

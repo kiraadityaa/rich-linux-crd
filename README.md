@@ -12,6 +12,7 @@
   <a href="https://github.com/kiraadityaa/rich-linux-crd/actions/workflows/cinnamon.yml"><img src="https://github.com/kiraadityaa/rich-linux-crd/actions/workflows/cinnamon.yml/badge.svg" alt="Cinnamon workflow status" /></a>
   <a href="https://github.com/kiraadityaa/rich-linux-crd/actions/workflows/gnome.yml"><img src="https://github.com/kiraadityaa/rich-linux-crd/actions/workflows/gnome.yml/badge.svg" alt="GNOME workflow status" /></a>
   <img src="https://img.shields.io/badge/Ubuntu-24.04-E95420?style=flat-square&logo=ubuntu&logoColor=white" alt="Ubuntu 24.04" />
+  <img src="https://img.shields.io/badge/Ubuntu_26.04-Preview-772953?style=flat-square&logo=ubuntu&logoColor=white" alt="Ubuntu 26.04 Preview" />
   <img src="https://img.shields.io/badge/Cinnamon-Full-success?style=flat-square" alt="Cinnamon" />
   <img src="https://img.shields.io/badge/GNOME-Stable-blue?style=flat-square&logo=gnome&logoColor=white" alt="GNOME" />
   <img src="https://img.shields.io/badge/XFCE-Beta-orange?style=flat-square&logo=xfce&logoColor=white" alt="XFCE Beta" />
@@ -34,22 +35,22 @@ Image sources: workflow status badges from GitHub Actions, technology badges fro
 
 | Feature | Detail |
 |---|---|
-| Two desktops | Cinnamon Full (approx. 1 GB), GNOME Ubuntu Desktop (approx. 2 GB), or **XFCE (Beta)** — the lightest, fastest option |
+| Three desktops | Cinnamon Full (approx. 1 GB), GNOME Ubuntu Desktop (approx. 2 GB), or **XFCE (Beta)** — the lightest, fastest option |
 | XFCE Beta | New workflow `xfce.yml` on the **ubuntu-26.04 public-preview** image — XFCE + xfwm4 for maximum responsiveness (beta: preview image, `/dev/kvm` not yet verified there) |
 | Instant remote access | Chrome Remote Desktop, default PIN `123456` (customizable via secret) |
-| Dev tools included | Google Chrome, OpenCode CLI + OpenCode Desktop (both desktops); **VS Code** pre-installed in GNOME (install manually in Cinnamon via `sudo apt-get install code`) |
+| Dev tools included | Google Chrome, OpenCode CLI + OpenCode Desktop (all three desktops); **VS Code** pre-installed in GNOME (install manually in Cinnamon or XFCE via `sudo apt-get install code`) |
 | Session length | Automatic keep-alive per workflow run (up to 6 hours) |
 | Crash-resistant session | Direct `exec` without `Xsession`/`lightdm` wrappers + Mesa software rendering (fixes the "Oh no! Something has gone wrong" screen) |
 | Disconnect-safe upgrades | [`safe-upgrade`](scripts/safe-upgrade.sh) helper inside the session (holds critical packages: CRD/Chrome, desktop shell, systemd/init, kernel); GNOME workflow also runs full `upgrade` at build time |
 | Quiet installs | Needrestart apt hook disabled (`/etc/apt/apt.conf.d/99needrestart` removed) → no "Scanning processes..." output and no auto service restarts during any install/upgrade |
 | No snap bloat | `snapd` + transitional `thunderbird`/`firefox` deb purged and held → no `snap` daemon, no 30-minute thunderbird-snap retry hang during desktop installs, and nothing can silently reinstall snaps; tradeoff: `snap install`/Snap Store unavailable (GNOME Software shows apt sources only) |
-| Catppuccin theme + Zafiro icons | Cinnamon workflow auto-extracts `cinnamon-theme.zip` → Catppuccin-B-LB-Dark theme + Zafiro-Nord-Black icon theme, applied via dconf |
-| Auto resolution 1600x1200 (Cinnamon + GNOME) | Dual-layer: Xorg dummy config + xrandr retry auto-detect loop in the session file, plus an autostart fallback script |
+| Catppuccin theme + Zafiro icons | Cinnamon & XFCE workflows auto-extract `cinnamon-theme.zip` → Catppuccin-B-LB-Dark theme + Zafiro-Nord-Black icon theme (Cinnamon applied via dconf, XFCE via xfconf) |
+| Auto resolution 1600x1200 (all three desktops) | Dual-layer: Xorg dummy config + xrandr retry auto-detect loop in the session file, plus an autostart fallback script |
 | KVM virtualization | `/dev/kvm` exposed on the runner + QEMU/libvirt stack (virt-manager, GNOME Boxes) preinstalled; `runner` in `kvm` + `libvirt` groups → hardware-accelerated VMs inside the remote desktop |
-| Audio streaming | Chrome Remote Desktop natively streams audio from the remote session — no extra PulseAudio/PipeWire config needed |
+| Audio streaming (all three desktops) | Chrome Remote Desktop natively streams audio from the remote session — no extra PulseAudio/PipeWire config needed (XFCE installs `pulseaudio` explicitly) |
 | Smooth remote experience | Mesa software rendering, direct exec session, disabled screensaver/lock → responsive desktop without crashes |
 | Zero-config setup | 4-step Quick Start: fork repo → copy CRD command → run workflow → connect with PIN. No SSH, no port forwarding, no firewall config |
-| Wallpaper included | Catppuccin **Black Unicat** preinstalled for the `runner` user on both desktops |
+| Wallpaper included | Catppuccin **Black Unicat** preinstalled for the `runner` user on all three desktops |
 | Desktop layout | Cinnamon: clean desktop (no shortcuts) — tools in the app menu; GNOME: shortcuts (Antigravity, VS Code, OpenCode, Safe Upgrade) |
 
 ---
@@ -62,40 +63,40 @@ No SSH keys, no port forwarding, no firewall rules. Fork this repository, copy a
 
 ### Smooth Remote Experience
 
-Both Cinnamon and GNOME sessions are configured for headless operation:
+All three desktops are configured for headless operation:
 
 - **Direct exec** session files bypass LightDM/Xsession wrappers that cause the "Oh no! Something has gone wrong" crash
 - **Mesa software rendering** (`LIBGL_ALWAYS_SOFTWARE=1`) ensures the desktop renders correctly on GitHub Actions runners without a physical GPU
 - **Screensaver and lock disabled** — the session stays alive and responsive, never timing out or locking you out
-- **Auto resolution 1600x1200** (Cinnamon + GNOME) — xrandr retry auto-detect in the session file applies the optimal resolution, with an autostart fallback script
+- **Auto resolution 1600x1200** (all three desktops) — xrandr retry auto-detect in the session file applies the optimal resolution, with an autostart fallback script
 
 ### Audio Streaming
 
-Chrome Remote Desktop streams audio from the remote session to your browser automatically. No PulseAudio or PipeWire configuration is needed — Cinnamon and GNOME both use the default Ubuntu audio stack, and CRD handles the rest. Play music, watch videos, or join video calls — audio works out of the box.
+Chrome Remote Desktop streams audio from the remote session to your browser automatically. No PulseAudio or PipeWire configuration is needed — all three desktops use the default Ubuntu audio stack (XFCE installs `pulseaudio` explicitly), and CRD handles the rest. Play music, watch videos, or join video calls — audio works out of the box.
 
-### Catppuccin Theme & Zafiro Icons (Cinnamon)
+### Catppuccin Theme & Zafiro Icons (Cinnamon & XFCE)
 
-The Cinnamon workflow ships with a premium look out of the box:
+The Cinnamon & XFCE workflows ship with a premium look out of the box:
 
 - **Catppuccin-B-LB-Dark** — a dark GTK/Cinnamon theme with smooth, rounded UI elements
 - **Zafiro-Nord-Black** — a flat, minimal icon theme based on the Nord color palette
 - **Catppuccin Black Unicat** wallpaper — pre-set as the desktop background
-- Theme and icons are applied automatically via dconf, with an autostart fallback to persist across sessions
+- Theme and icons are applied automatically (Cinnamon via dconf, XFCE via xfconf), with an autostart fallback to persist across sessions
 
 ### Built-in Dev Tools
 
 | Tool | Purpose | Available in |
 |---|---|---|
-| Google Chrome | Full browser with extensions, profiles, and DevTools | Cinnamon + GNOME |
-| VS Code | Code editor with terminal, extensions, and remote development | **GNOME** only; install in Cinnamon via `sudo apt-get install code` |
-| OpenCode CLI + Desktop | AI-powered coding assistant | Cinnamon + GNOME |
-| Virtual Machine tools | QEMU/KVM, libvirt (`virsh`, `virt-install`), Virtual Machine Manager, GNOME Boxes | Cinnamon + GNOME |
+| Google Chrome | Full browser with extensions, profiles, and DevTools | Cinnamon, GNOME & XFCE |
+| VS Code | Code editor with terminal, extensions, and remote development | **GNOME** only; install in Cinnamon or XFCE via `sudo apt-get install code` |
+| OpenCode CLI + Desktop | AI-powered coding assistant | Cinnamon, GNOME & XFCE |
+| Virtual Machine tools | QEMU/KVM, libvirt (`virsh`, `virt-install`), Virtual Machine Manager, GNOME Boxes | Cinnamon, GNOME & XFCE |
 
-GNOME provides desktop shortcuts (Antigravity, VS Code, OpenCode, Safe Upgrade). Cinnamon uses a clean desktop with tools in the application menu.
+GNOME provides desktop shortcuts (Antigravity, VS Code, OpenCode, Safe Upgrade). Cinnamon & XFCE use a clean desktop with tools in the application menu.
 
 ### KVM Hardware-Accelerated Virtualization
 
-This GitHub-hosted runner exposes `/dev/kvm` (Intel VT-x), so the desktop can run **real, hardware-accelerated virtual machines** — not slow software emulation. Both workflows install the full QEMU/libvirt stack and give the `runner` user direct access:
+This GitHub-hosted runner exposes `/dev/kvm` (Intel VT-x), so the desktop can run **real, hardware-accelerated virtual machines** — not slow software emulation. All three workflows install the full QEMU/libvirt stack and give the `runner` user direct access:
 
 - **QEMU/KVM** (`qemu-system-x86_64`, `/dev/kvm`) — hardware-accelerated CPU virtualization
 - **libvirt** (`libvirtd`, `virsh`, `virt-install`) — VM management daemon, enabled and started at build time
@@ -131,7 +132,7 @@ Running `sudo apt upgrade` inside a CRD session drops the connection (it restart
 
 - Holds critical packages (CRD, desktop shell, systemd, kernel)
 - Upgrades everything else safely
-- A MOTD warning in both workflows (plus a **Safe Upgrade** shortcut on GNOME) prevents accidental `apt upgrade`
+- A MOTD warning in all three workflows (plus a **Safe Upgrade** shortcut on GNOME) prevents accidental `apt upgrade`
 
 `safe-upgrade` also ships with safety tooling beyond the basic upgrade:
 
@@ -224,7 +225,7 @@ Symptom: the PIN is correct and the connection succeeds, but the screen shows a 
 
 Cause: the session file used a `lightdm-session` wrapper that requires a physical LightDM seat — which does not exist on the headless CRD runner.
 
-Fix already applied in both workflows:
+Fix already applied in all three workflows:
 
 ```bash
 # Cinnamon
@@ -243,6 +244,14 @@ XDG_RUNTIME_DIR=/run/user/$(id -u)
 LIBGL_ALWAYS_SOFTWARE=1
 MUTTER_DEBUG_FORCE_SOFTWARE_RENDER=1
 exec /usr/bin/gnome-session --session=ubuntu
+
+# XFCE (Beta)
+DESKTOP_SESSION=xfce
+XDG_CURRENT_DESKTOP=XFCE
+XDG_SESSION_TYPE=x11
+XDG_RUNTIME_DIR=/run/user/$(id -u)
+LIBGL_ALWAYS_SOFTWARE=1
+exec /usr/bin/xfce4-session
 ```
 
 Plus Mesa/LLVMPipe packages for software rendering, with no conflicting LightDM installation.
@@ -266,7 +275,7 @@ Cause: the upgrade also raises `chrome-remote-desktop` / `gnome-shell` / `mutter
 | See which packages changed | Check the version diff in `safe-upgrade` output, or diff `/var/log/safe-upgrade-pre.log` vs `/var/log/safe-upgrade-post.log` |
 
 > [!TIP]
-> Implementation: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh). It ships with a color-coded **summary table**, **version diff** (old → new), **rollback logs** (`/var/log/safe-upgrade-pre.log` & `post.log`), a **kernel reboot check**, and an **interrupt-safe trap** that auto-releases package holds. The GNOME workflow also installs a **Safe Upgrade** desktop shortcut; both workflows set a MOTD warning.
+> Implementation: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh). It ships with a color-coded **summary table**, **version diff** (old → new), **rollback logs** (`/var/log/safe-upgrade-pre.log` & `post.log`), a **kernel reboot check**, and an **interrupt-safe trap** that auto-releases package holds. The GNOME workflow also installs a **Safe Upgrade** desktop shortcut; all three workflows set a MOTD warning.
 
 ---
 
@@ -281,7 +290,7 @@ rich-linux-crd/
 │       └── xfce.yml       # RICH LINUX (XFCE BETA + CRD)
 ├── assets/
 │   ├── architecture.svg        # Architecture diagram used in this README
-│   ├── cinnamon-theme.zip      # Catppuccin theme + Zafiro icons (auto-installed by Cinnamon workflow)
+│   ├── cinnamon-theme.zip      # Catppuccin theme + Zafiro icons (auto-installed by the Cinnamon & XFCE workflows)
 │   ├── rich-linux-crd-banner.svg
 │   └── rich-linux-crd-logo.svg
 ├── opencode-setup/
@@ -303,7 +312,7 @@ rich-linux-crd/
 | Need | How |
 |---|---|
 | Change PIN | Create a `CRD_PIN` repository secret (Settings → Secrets → Actions), 6+ digits |
-| Change the `runner` user password | Edit the `echo "runner:...` line in the workflow (default `root` on both workflows) |
+| Change the `runner` user password | Edit the `echo "runner:...` line in the workflow (default `root` on all three workflows) |
 | Add applications | Add a new `apt-get install` step before the CRD step, e.g. `apt-get install -y code` to add VS Code to Cinnamon (needrestart is already disabled, so it stays quiet) |
 | Change the wallpaper | Edit the download URL in the **Set Wallpaper** step of the workflow |
 | Change the display resolution | Edit the Xorg dummy config and xrandr commands in the **Configure CRD Cinnamon Session** step (STEP 08) of `cinnamon.yml` |
@@ -321,9 +330,9 @@ rich-linux-crd/
 - The default PIN `123456` is for convenience only. For serious use, set a custom `CRD_PIN`.
 - The GitHub Actions free tier has monthly minute limits — monitor Settings → Billing.
 - The Cinnamon workflow automatically installs the Catppuccin theme and Zafiro icons from `assets/cinnamon-theme.zip` — no manual setup required.
-- Display resolution is set to 1600x1200 via xrandr auto-detection in the session file (both Cinnamon and GNOME).
+- Display resolution is set to 1600x1200 via xrandr auto-detection in the session file (all three desktops).
 - KVM is exposed on this GitHub-hosted runner (`/dev/kvm`, Intel VT-x, nested = enabled) — used for **hardware-accelerated VMs** inside the desktop. It does not accelerate the CRD rendering itself, and availability can vary across GitHub runner fleets: if `/dev/kvm` is absent, the workflow only warns (no failure) and VMs would fall back to QEMU TCG (slow).
-- Snap is intentionally **removed and held** in both workflows. The reason: Ubuntu 24.04's `thunderbird` is a *transitional deb* whose post-install script forces `snap install thunderbird` — on a runner without proper snap-store access this retried for 30 minutes, stalling every desktop install. `snapd`, `thunderbird` (snap-transitional), and `firefox` are purged after install and held so nothing can silently reinstall them. Honest tradeoffs: `snap install` is unavailable, the Snap Store no longer appears in GNOME Software (apt sources remain), and `firefox` is removed — Google Chrome stays as the browser. If you ever need a full browser alternative, install Firefox ESR or Chromium via apt.
+- Snap is intentionally **removed and held** in all three workflows. The reason: Ubuntu 24.04's `thunderbird` is a *transitional deb* whose post-install script forces `snap install thunderbird` — on a runner without proper snap-store access this retried for 30 minutes, stalling every desktop install. `snapd`, `thunderbird` (snap-transitional), and `firefox` are purged after install and held so nothing can silently reinstall them. Honest tradeoffs: `snap install` is unavailable, the Snap Store no longer appears in GNOME Software (apt sources remain), and `firefox` is removed — Google Chrome stays as the browser. If you ever need a full browser alternative, install Firefox ESR or Chromium via apt.
 - The **XFCE Beta** workflow (`xfce.yml`) uses the `ubuntu-26.04` runner image which is a GitHub **public preview** (announced June 2026). Expect it to be slightly less battle-tested than the 24.04 workflows; report issues to the issue tracker with the workflow name `xfce.yml`.
 - `safe-upgrade` snapshots package versions before/after each run to `/var/log/safe-upgrade-pre.log` and `/var/log/safe-upgrade-post.log` — diff them to inspect exact changes.
 - This project is intended for **lawful use only**. See [Acceptable Use & Legal Disclaimer](#acceptable-use--legal-disclaimer).

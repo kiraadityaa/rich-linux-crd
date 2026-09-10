@@ -2,7 +2,7 @@
 
 [English](README.md) | **Bahasa Indonesia**
 
-> Ubuntu 24.04 di GitHub Actions + Chrome Remote Desktop. Pilih desktop **Cinnamon** yang ringan atau **GNOME** yang stabil, lalu remote dari mana saja dengan PIN.
+> Ubuntu 24.04/26.04 di GitHub Actions + Chrome Remote Desktop. Pilih desktop **Cinnamon** yang ringan, **GNOME** yang stabil, atau **XFCE (Beta)** paling cepat — lalu remote dari mana saja dengan PIN.
 
 <p align="center">
   <img src="assets/rich-linux-crd-banner.svg" alt="Banner RICH Linux CRD" width="820" />
@@ -12,8 +12,8 @@ Dokumen utama (lengkap, dalam Bahasa Inggris): [README.md](README.md). Halaman i
 
 **Fitur cepat:**
 - **Setup 4 langkah, 5 menit** — fork repo → salin perintah CRD → jalankan workflow → konek dari browser. Tanpa SSH, tanpa port forwarding, tanpa firewall.
-- **Tema Catppuccin + Ikon Zafiro** — workflow Cinnamon otomatis memasang tema Catppuccin-B-LB-Dark dan ikon Zafiro-Nord-Black.
-- **Resolusi otomatis 1600x1200** (Cinnamon + GNOME) — xrandr auto-detect tampilan dan menerapkan resolusi optimal, plus fallback autostart.
+- **Tema Catppuccin + Ikon Zafiro** — workflow Cinnamon & XFCE otomatis memasang tema Catppuccin-B-LB-Dark dan ikon Zafiro-Nord-Black (Cinnamon via dconf, XFCE via xfconf).
+- **Resolusi otomatis 1600x1200** (semua tiga desktop) — xrandr auto-detect tampilan dan menerapkan resolusi optimal, plus fallback autostart.
 - **Virtualisasi KVM** — dukungan `/dev/kvm` (Intel VT-x) dimanfaatkan: QEMU/KVM + libvirt + virt-manager + GNOME Boxes siap pakai; user `runner` sudah masuk grup `kvm` dan `libvirt`.
 - **Audio streaming** — Chrome Remote Desktop menyiarkan audio dari sesi remote ke browser secara otomatis.
 - **Instalasi senyap** — hook needrestart dinonaktifkan, jadi tidak ada log `Scanning processes...` dan tidak ada restart layanan otomatis saat install/upgrade (mencegah sesi CRD putus).
@@ -32,36 +32,36 @@ Tanpa SSH keys, tanpa port forwarding, tanpa firewall. Fork repo ini, salin peri
 
 ### Pengalaman Remote yang Mulus
 
-Sesi Cinnamon dan GNOME dikonfigurasi untuk operasi headless:
+Sesi semua tiga desktop dikonfigurasi untuk operasi headless:
 
 - **Direct exec** — session file melewati wrapper LightDM/Xsession yang menyebabkan crash "Oh no! Something has gone wrong"
 - **Mesa software rendering** (`LIBGL_ALWAYS_SOFTWARE=1`) memastikan desktop render dengan benar di GitHub Actions runner tanpa GPU fisik
 - **Screensaver dan lock dinonaktifkan** — sesi tetap hidup dan responsif, tidak pernah timeout atau mengunci Anda keluar
-- **Resolusi otomatis 1600x1200** (Cinnamon + GNOME) — xrandr auto-detect tampilan dan menerapkan resolusi optimal, plus fallback autostart
+- **Resolusi otomatis 1600x1200** (semua tiga desktop) — xrandr auto-detect tampilan dan menerapkan resolusi optimal, plus fallback autostart
 
 ### Audio Streaming
 
-Chrome Remote Desktop menyiarkan audio dari sesi remote ke browser secara otomatis. Tidak perlu konfigurasi PulseAudio atau PipeWire — Cinnamon dan GNOME keduanya menggunakan audio stack Ubuntu default, dan CRD menangani sisanya. Putar musik, tonton video, atau ikut video call — audio langsung jalan.
+Chrome Remote Desktop menyiarkan audio dari sesi remote ke browser secara otomatis. Tidak perlu konfigurasi PulseAudio atau PipeWire — ketiga desktop memakai audio stack Ubuntu default (XFCE memasang `pulseaudio` secara eksplisit), dan CRD menangani sisanya. Putar musik, tonton video, atau ikut video call — audio langsung jalan.
 
-### Tema Catppuccin & Ikon Zafiro (Cinnamon)
+### Tema Catppuccin & Ikon Zafiro (Cinnamon & XFCE)
 
-Workflow Cinnamon hadir dengan tampilan premium langsung dari awal:
+Workflow Cinnamon & XFCE hadir dengan tampilan premium langsung dari awal:
 
 - **Catppuccin-B-LB-Dark** — tema GTK/Cinnamon gelap dengan elemen UI yang halus dan rounded
 - **Zafiro-Nord-Black** — tema ikon flat minimalis berdasarkan palet warna Nord
 - **Wallpaper Catppuccin Black Unicat** — sudah di-set sebagai background desktop
-- Tema dan ikon diterapkan otomatis via dconf, dengan autostart fallback agar persist lintas sesi
+- Tema dan ikon diterapkan otomatis (Cinnamon via dconf, XFCE via xfconf), dengan autostart fallback agar persist lintas sesi
 
 ### Dev Tools Bawaan
 
 | Tool | Kegunaan | Tersedia di |
 |---|---|---|
-| Google Chrome | Browser lengkap dengan ekstensi, profil, dan DevTools | Cinnamon + GNOME |
-| VS Code | Code editor dengan terminal, ekstensi, dan remote development | **GNOME saja**; untuk Cinnamon pasang via `sudo apt-get install code` |
-| OpenCode CLI + Desktop | Asisten coding bertenaga AI | Cinnamon + GNOME |
-| Virtual Machine tools | QEMU/KVM, libvirt (`virsh`, `virt-install`), virt-manager, GNOME Boxes | Cinnamon + GNOME |
+| Google Chrome | Browser lengkap dengan ekstensi, profil, dan DevTools | Cinnamon, GNOME & XFCE |
+| VS Code | Code editor dengan terminal, ekstensi, dan remote development | **GNOME saja**; untuk Cinnamon atau XFCE pasang via `sudo apt-get install code` |
+| OpenCode CLI + Desktop | Asisten coding bertenaga AI | Cinnamon, GNOME & XFCE |
+| Virtual Machine tools | QEMU/KVM, libvirt (`virsh`, `virt-install`), virt-manager, GNOME Boxes | Cinnamon, GNOME & XFCE |
 
-GNOME menyediakan shortcut desktop (Antigravity, VS Code, OpenCode, Safe Upgrade). Cinnamon menggunakan desktop bersih dengan tool di menu aplikasi.
+GNOME menyediakan shortcut desktop (Antigravity, VS Code, OpenCode, Safe Upgrade). Cinnamon & XFCE menggunakan desktop bersih dengan tool di menu aplikasi.
 
 ### Virtualisasi KVM (Hardware-Accelerated VM)
 
@@ -101,7 +101,7 @@ Menjalankan `sudo apt upgrade` di dalam sesi CRD memutus koneksi (karena me-rest
 
 - Menahan paket kritis (CRD, desktop shell, systemd, kernel)
 - Mengupgrade sisanya dengan aman
-- MOTD warning di kedua workflow (plus shortcut **Safe Upgrade** di GNOME) mencegah `apt upgrade` yang tidak sengaja
+- MOTD warning di ketiga workflow (plus shortcut **Safe Upgrade** di GNOME) mencegah `apt upgrade` yang tidak sengaja
 
 `safe-upgrade` juga dilengkapi fitur keamanan ekstra:
 
@@ -178,7 +178,7 @@ Gejala: PIN benar dan koneksi berhasil, tapi layar menampilkan wajah sedih denga
 
 Penyebab: session file lama memakai wrapper `lightdm-session` yang membutuhkan LightDM seat fisik — tidak ada di runner CRD yang headless.
 
-Solusi sudah diterapkan di kedua workflow (direct exec tanpa wrapper, plus paket Mesa/LLVMPipe untuk software rendering):
+Solusi sudah diterapkan di ketiga workflow (direct exec tanpa wrapper, plus paket Mesa/LLVMPipe untuk software rendering):
 
 ```bash
 # Cinnamon
@@ -197,6 +197,14 @@ XDG_RUNTIME_DIR=/run/user/$(id -u)
 LIBGL_ALWAYS_SOFTWARE=1
 MUTTER_DEBUG_FORCE_SOFTWARE_RENDER=1
 exec /usr/bin/gnome-session --session=ubuntu
+
+# XFCE (Beta)
+DESKTOP_SESSION=xfce
+XDG_CURRENT_DESKTOP=XFCE
+XDG_SESSION_TYPE=x11
+XDG_RUNTIME_DIR=/run/user/$(id -u)
+LIBGL_ALWAYS_SOFTWARE=1
+exec /usr/bin/xfce4-session
 ```
 
 ---
@@ -219,7 +227,7 @@ Penyebab: upgrade ikut menaikkan `chrome-remote-desktop` / `gnome-shell` / `mutt
 | Dapat upgrade kritis tanpa putus | Re-run workflow Actions (workflow GNOME menjalankan full `upgrade` di build-time) |
 | Lihat paket yang berubah | Baca version diff di output `safe-upgrade`, atau diff `/var/log/safe-upgrade-pre.log` vs `/var/log/safe-upgrade-post.log` |
 
-Implementasi: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh). Dilengkapi **tabel ringkasan** berwarna, **version diff** (lama → baru), **rollback log** (`/var/log/safe-upgrade-pre.log` & `post.log`), **cek reboot kernel**, dan **trap anti-interupsi** yang otomatis melepas hold paket. Workflow GNOME juga memasang shortcut desktop **Safe Upgrade**; kedua workflow memasang MOTD warning.
+Implementasi: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh). Dilengkapi **tabel ringkasan** berwarna, **version diff** (lama → baru), **rollback log** (`/var/log/safe-upgrade-pre.log` & `post.log`), **cek reboot kernel**, dan **trap anti-interupsi** yang otomatis melepas hold paket. Workflow GNOME juga memasang shortcut desktop **Safe Upgrade**; ketiga workflow memasang MOTD warning.
 
 ---
 
@@ -230,7 +238,7 @@ rich-linux-crd/
 ├── .github/workflows/       # cinnamon.yml, gnome.yml, xfce.yml (XFCE = beta)
 ├── assets/
 │   ├── architecture.svg     # Diagram arsitektur di README
-│   ├── cinnamon-theme.zip   # Tema Catppuccin + ikon Zafiro (otomatis diinstal oleh workflow Cinnamon)
+│   ├── cinnamon-theme.zip   # Tema Catppuccin + ikon Zafiro (otomatis diinstal oleh workflow Cinnamon & XFCE)
 │   ├── rich-linux-crd-banner.svg
 │   └── rich-linux-crd-logo.svg
 ├── opencode-setup/          # opencode-skills.md (panduan skill agent OpenCode + Context7)
@@ -249,7 +257,7 @@ rich-linux-crd/
 | Kebutuhan | Cara |
 |---|---|
 | Ganti PIN | Buat secret repo `CRD_PIN` (Settings → Secrets → Actions), minimal 6 digit |
-| Ganti password user `runner` | Edit baris `echo "runner:...` di workflow. Default password "root" di kedua workflow |
+| Ganti password user `runner` | Edit baris `echo "runner:...` di workflow. Default password "root" di ketiga workflow |
 | Tambah aplikasi | Tambah step `apt-get install` baru sebelum step CRD, mis. `apt-get install -y code` untuk menambah VS Code di Cinnamon (needrestart sudah dinonaktifkan, jadi tetap senyap) |
 | Ganti wallpaper | Edit URL download di step **Set Wallpaper** di workflow |
 | Ganti resolusi tampilan | Edit config dummy Xorg dan perintah xrandr di step **Configure CRD Cinnamon Session** (STEP 08) di `cinnamon.yml` |
@@ -267,9 +275,9 @@ rich-linux-crd/
 - PIN default `123456` hanya untuk kemudahan. Untuk penggunaan serius, buat `CRD_PIN` custom.
 - GitHub Actions free tier punya batas menit bulanan — pantau Settings → Billing.
 - Workflow Cinnamon secara otomatis memasang tema Catppuccin dan ikon Zafiro dari `assets/cinnamon-theme.zip` — tidak perlu setup manual.
-- Resolusi tampilan di-set ke 1600x1200 via xrandr auto-detection di session file (baik Cinnamon maupun GNOME).
+- Resolusi tampilan di-set ke 1600x1200 via xrandr auto-detection di session file (semua tiga desktop).
 - KVM tersedia di runner GitHub ini (`/dev/kvm`, Intel VT-x, nested = aktif) — dipakai untuk **VM berakselerasi hardware** di dalam desktop. Fitur ini tidak mempercepat rendering CRD itu sendiri, dan ketersediaannya bisa berbeda antar fleet runner GitHub: kalau `/dev/kvm` tidak ada, workflow hanya memperingatkan (tidak gagal) dan VM akan jatuh ke QEMU TCG (lambat).
-- Snap sengaja **dihapus permanen (purge + hold)** di kedua workflow. Alasannya: `thunderbird` di Ubuntu 24.04 adalah *deb transisi* yang post-install-nya memaksa `snap install thunderbird` — di runner tanpa akses store yang baik, ini retry 30 menit dan menahan seluruh install desktop. `snapd`, `thunderbird` (snap-transitional), dan `firefox` di-purge setelah install dan di-hold agar tidak bisa ter-reinstall diam-diam. Tradeoff yang jujur: `snap install` tidak tersedia, Snap Store tidak muncul lagi di GNOME Software (source apt tetap ada), dan `firefox` dicopot — Google Chrome tetap sebagai browser. Kalau butuh browser lain, install Firefox ESR atau Chromium via apt.
+- Snap sengaja **dihapus permanen (purge + hold)** di ketiga workflow. Alasannya: `thunderbird` di Ubuntu 24.04 adalah *deb transisi* yang post-install-nya memaksa `snap install thunderbird` — di runner tanpa akses store yang baik, ini retry 30 menit dan menahan seluruh install desktop. `snapd`, `thunderbird` (snap-transitional), dan `firefox` di-purge setelah install dan di-hold agar tidak bisa ter-reinstall diam-diam. Tradeoff yang jujur: `snap install` tidak tersedia, Snap Store tidak muncul lagi di GNOME Software (source apt tetap ada), dan `firefox` dicopot — Google Chrome tetap sebagai browser. Kalau butuh browser lain, install Firefox ESR atau Chromium via apt.
 - Workflow **XFCE Beta** (`xfce.yml`) memakai runner image `ubuntu-26.04` yang masih **public preview** (diumumkan Juni 2026). Belum seterbukti workflow 24.04; laporkan masalah ke issue tracker dengan nama workflow `xfce.yml`.
 - `safe-upgrade` menyimpan snapshot versi paket sebelum/sesudah di `/var/log/safe-upgrade-pre.log` dan `/var/log/safe-upgrade-post.log` — diff keduanya untuk melihat perubahan persis.
 - Proyek ini **hanya untuk penggunaan yang sah**. Lihat [Kebijakan Penggunaan & Disclaimer](#kebijakan-penggunaan--disclaimer).

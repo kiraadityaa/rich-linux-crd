@@ -178,7 +178,7 @@ jobs:
             xfdesktop4 \
             dbus-x11 \
             dbus-user-session \
-            policykit-1 \
+            polkitd pkexec \
             x11-xserver-utils \
             xorg \
             xserver-xorg-video-dummy \
@@ -188,6 +188,7 @@ jobs:
             gtk2-engines-pixbuf \
             adwaita-icon-theme \
             fonts-cantarell \
+            pulseaudio \
             qemu-system-x86 \
             qemu-utils \
             libvirt-daemon-system \

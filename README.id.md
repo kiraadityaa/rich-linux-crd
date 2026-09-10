@@ -11,7 +11,7 @@
 Dokumen utama (lengkap, dalam Bahasa Inggris): [README.md](README.md). Halaman ini ringkasannya dalam Bahasa Indonesia.
 
 **Fitur cepat:**
-- **Setup 3 langkah, 5 menit** — tanpa SSH, tanpa port forwarding, tanpa firewall. Cukup salin perintah CRD, jalankan workflow, konek dari browser.
+- **Setup 4 langkah, 5 menit** — fork repo → salin perintah CRD → jalankan workflow → konek dari browser. Tanpa SSH, tanpa port forwarding, tanpa firewall.
 - **Tema Catppuccin + Ikon Zafiro** — workflow Cinnamon otomatis memasang tema Catppuccin-B-LB-Dark dan ikon Zafiro-Nord-Black.
 - **Resolusi otomatis 1600x1200** — xrandr auto-detect tampilan dan menerapkan resolusi optimal.
 - **Audio streaming** — Chrome Remote Desktop menyiarkan audio dari sesi remote ke browser secara otomatis.
@@ -23,9 +23,9 @@ Dokumen utama (lengkap, dalam Bahasa Inggris): [README.md](README.md). Halaman i
 
 ## Fitur Unggulan
 
-### Setup Mudah — 3 Langkah, 5 Menit
+### Setup Mudah — 4 Langkah, 5 Menit
 
-Tanpa SSH keys, tanpa port forwarding, tanpa firewall. Cukup salin perintah CRD dari halaman Google, tempel ke workflow GitHub Actions, dan konek dari browser. Seluruh stack — desktop environment, browser, code editor, dan remote access — terinstal otomatis.
+Tanpa SSH keys, tanpa port forwarding, tanpa firewall. Fork repo ini, salin perintah CRD dari halaman Google, tempel ke workflow GitHub Actions di fork Anda, dan konek dari browser. Seluruh stack — desktop environment, browser, code editor, dan remote access — terinstal otomatis.
 
 ### Pengalaman Remote yang Mulus
 
@@ -51,13 +51,13 @@ Workflow Cinnamon hadir dengan tampilan premium langsung dari awal:
 
 ### Dev Tools Bawaan
 
-| Tool | Kegunaan |
-|---|---|
-| Google Chrome | Browser lengkap dengan ekstensi, profil, dan DevTools |
-| VS Code | Code editor dengan terminal, ekstensi, dan remote development |
-| OpenCode CLI + Desktop | Asisten coding bertenaga AI |
+| Tool | Kegunaan | Tersedia di |
+|---|---|---|
+| Google Chrome | Browser lengkap dengan ekstensi, profil, dan DevTools | Cinnamon + GNOME |
+| VS Code | Code editor dengan terminal, ekstensi, dan remote development | **GNOME saja**; untuk Cinnamon pasang via `sudo apt-get install code` |
+| OpenCode CLI + Desktop | Asisten coding bertenaga AI | Cinnamon + GNOME |
 
-Semua tool sudah terinstal dan tersedia dari menu aplikasi (Cinnamon) atau shortcut desktop (GNOME).
+GNOME menyediakan shortcut desktop (Antigravity, VS Code, OpenCode, Safe Upgrade). Cinnamon menggunakan desktop bersih dengan tool di menu aplikasi.
 
 ### Upgrade Anti-Putus
 
@@ -67,9 +67,26 @@ Menjalankan `sudo apt upgrade` di dalam sesi CRD memutus koneksi (karena me-rest
 - Mengupgrade sisanya dengan aman
 - MOTD warning di kedua workflow (plus shortcut **Safe Upgrade** di GNOME) mencegah `apt upgrade` yang tidak sengaja
 
+`safe-upgrade` juga dilengkapi fitur keamanan ekstra:
+
+- **Version diff** — menampilkan setiap paket yang di-upgrade sebagai `nama: versi_lama → versi_baru`, plus paket baru dan yang dihapus
+- **`--cleanup`** — menjalankan `apt-get autoremove` setelah upgrade untuk menghemat ruang disk
+- **Rollback tracking** — snapshot semua versi paket sebelum & sesudah ke `/var/log/safe-upgrade-pre.log` dan `/var/log/safe-upgrade-post.log`
+- **Tabel ringkasan** — ringkasan berwarna untuk paket yang di-upgrade / di-hold / dihapus dan durasi
+- **Cek reboot kernel** — memperingatkan bila kernel baru terinstall tetapi belum aktif
+- **Anti-interupsi** — trap `SIGINT`/`SIGTERM`/`EXIT` otomatis melepas hold paket bila upgrade dibatalkan di tengah jalan
+
 ---
 
 ## Mulai Cepat (5 menit)
+
+Workflow memakai `workflow_dispatch`, jadi **harus dijalankan dari fork milik Anda** — GitHub hanya mengizinkan trigger Actions di repo yang Anda kontrol.
+
+### 0. Fork repository ini
+
+1. Buka <https://github.com/kiraadityaa/rich-linux-crd>.
+2. Klik **Fork** (kanan atas) untuk membuat salinan di akun GitHub Anda.
+3. Semua langkah berikut dilakukan di **fork Anda**.
 
 ### 1. Ambil perintah host CRD
 
@@ -79,7 +96,7 @@ Menjalankan `sudo apt upgrade` di dalam sesi CRD memutus koneksi (karena me-rest
 
 ### 2. Jalankan workflow
 
-1. Buka tab **Actions** di repo ini.
+1. Buka tab **Actions** di **fork Anda**.
 2. Pilih workflow:
    - **RICH LINUX (Cinnamon + Chrome Remote Desktop)** → file `.github/workflows/cinnamon.yml`
    - **RICH LINUX (GNOME + Chrome Remote Desktop)** → file `.github/workflows/gnome.yml`
@@ -106,9 +123,10 @@ Menjalankan `sudo apt upgrade` di dalam sesi CRD memutus koneksi (karena me-rest
 | Sesi CRD | `exec /usr/bin/cinnamon-session --session cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /usr/bin/gnome-session --session=ubuntu` + `LIBGL_ALWAYS_SOFTWARE=1` |
 | Display manager | Tidak dipakai (headless) | Tidak dipakai (headless) |
 | Shortcut desktop | Tidak ada (desktop bersih) | Antigravity, VS Code, OpenCode, Safe Upgrade |
+| Dev tools | Chrome + OpenCode CLI/Desktop | Chrome + VS Code + OpenCode CLI/Desktop |
 | Screensaver, lock, suspend | Dinonaktifkan | Dinonaktifkan |
 | Wallpaper | Catppuccin Black Unicat (via `org.cinnamon.desktop.background`) | Catppuccin Black Unicat (via `org.gnome.desktop.background`) |
-| Upgrade | Full upgrade di build-time + `safe-upgrade` di sesi | Full upgrade di build-time + `safe-upgrade` di sesi |
+| Upgrade | `safe-upgrade` di sesi (tanpa build-time full upgrade — bisa ditambah via kustomisasi) | Full upgrade di build-time + `safe-upgrade` di sesi |
 | Cocok untuk | Tampilan ala Mint, ukuran lebih ringan, tema premium | Stabilitas maksimal |
 
 ---
@@ -126,10 +144,12 @@ Penyebab: upgrade ikut menaikkan `chrome-remote-desktop` / `gnome-shell` / `mutt
 |---|---|
 | Upgrade harian yang aman (di terminal CRD) | `safe-upgrade` |
 | Cek dulu tanpa mengubah apa pun | `safe-upgrade --check` |
+| Upgrade + autoremove (hemat disk) | `safe-upgrade --cleanup` |
 | Upgrade CRD/Chrome/desktop juga (SESI AKAN PUTUS) | `safe-upgrade --allow-crd-restart` / `safe-upgrade --include-desktop` |
-| Dapat upgrade kritis tanpa putus | Re-run workflow Actions (sudah full `upgrade` di build-time) |
+| Dapat upgrade kritis tanpa putus | Re-run workflow Actions (workflow GNOME menjalankan full `upgrade` di build-time) |
+| Lihat paket yang berubah | Baca version diff di output `safe-upgrade`, atau diff `/var/log/safe-upgrade-pre.log` vs `/var/log/safe-upgrade-post.log` |
 
-Implementasi: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh).
+Implementasi: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh). Dilengkapi **tabel ringkasan** berwarna, **version diff** (lama → baru), **rollback log** (`/var/log/safe-upgrade-pre.log` & `post.log`), **cek reboot kernel**, dan **trap anti-interupsi** yang otomatis melepas hold paket. Workflow GNOME juga memasang shortcut desktop **Safe Upgrade**; kedua workflow memasang MOTD warning.
 
 ---
 
@@ -141,8 +161,9 @@ rich-linux-crd/
 ├── assets/
 │   ├── architecture.svg     # Diagram arsitektur di README
 │   ├── cinnamon-theme.zip   # Tema Catppuccin + ikon Zafiro (otomatis diinstal oleh workflow Cinnamon)
-│   └── rich-linux-crd-banner.svg
-├── scripts/                 # safe-upgrade.sh
+│   ├── rich-linux-crd-banner.svg
+│   └── rich-linux-crd-logo.svg
+├── scripts/                 # safe-upgrade.sh (version diff, --cleanup, rollback log, summary, reboot check)
 ├── README.md                # Dokumen utama (Inggris)
 ├── README.id.md             # File ini (Indonesia)
 ├── LICENSE
@@ -156,10 +177,10 @@ rich-linux-crd/
 | Kebutuhan | Cara |
 |---|---|
 | Ganti PIN | Buat secret repo `CRD_PIN` (Settings → Secrets → Actions), minimal 6 digit |
-| Ganti password user `runner` | Edit baris `echo "runner:...` di workflow. Default password "root"|
-| Tambah aplikasi | Tambah step `apt-get install` baru sebelum step CRD (needrestart sudah dinonaktifkan, jadi tetap senyap) |
+| Ganti password user `runner` | Edit baris `echo "runner:...` di workflow. Default password "root" di kedua workflow |
+| Tambah aplikasi | Tambah step `apt-get install` baru sebelum step CRD, mis. `apt-get install -y code` untuk menambah VS Code di Cinnamon (needrestart sudah dinonaktifkan, jadi tetap senyap) |
 | Ganti wallpaper | Edit URL download di step **Set Wallpaper** di workflow |
-| Ganti resolusi tampilan | Edit config dummy Xorg dan perintah xrandr di step **Configure CRD Cinnamon Session** (STEP 09) di `cinnamon.yml` |
+| Ganti resolusi tampilan | Edit config dummy Xorg dan perintah xrandr di step **Configure CRD Cinnamon Session** (STEP 08) di `cinnamon.yml` |
 | Ganti tema | Ganti `cinnamon-theme.zip` di `assets/` dengan tema Anda sendiri (harus berisi direktori `themes/` dan `icons/`) |
 | Perpanjang durasi | Edit `sleep 21600` di step **Keep Alive** (maks 6 jam karena limit Actions) |
 
@@ -168,11 +189,13 @@ rich-linux-crd/
 ## Catatan
 
 - Workflow menggunakan `workflow_dispatch` — hanya berjalan saat Anda menjalankan secara manual.
+- GitHub hanya mengizinkan Actions di repo yang Anda kontrol — **fork repository ini dulu**, lalu jalankan workflow dari fork Anda.
 - Jangan commit perintah CRD ke repo (berisi kode auth sekali pakai). Cukup tempel ke input workflow.
 - PIN default `123456` hanya untuk kemudahan. Untuk penggunaan serius, buat `CRD_PIN` custom.
 - GitHub Actions free tier punya batas menit bulanan — pantau Settings → Billing.
 - Workflow Cinnamon secara otomatis memasang tema Catppuccin dan ikon Zafiro dari `assets/cinnamon-theme.zip` — tidak perlu setup manual.
 - Resolusi tampilan di-set ke 1600x1200 via xrandr auto-detection di session file Cinnamon.
+- `safe-upgrade` menyimpan snapshot versi paket sebelum/sesudah di `/var/log/safe-upgrade-pre.log` dan `/var/log/safe-upgrade-post.log` — diff keduanya untuk melihat perubahan persis.
 
 ---
 

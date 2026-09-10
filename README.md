@@ -34,16 +34,16 @@ Image sources: workflow status badges from GitHub Actions, technology badges fro
 |---|---|
 | Two desktops | Cinnamon Full (approx. 1 GB) or GNOME Ubuntu Desktop (approx. 2 GB) |
 | Instant remote access | Chrome Remote Desktop, default PIN `123456` (customizable via secret) |
-| Dev tools included | Google Chrome, VS Code, OpenCode CLI + OpenCode Desktop |
+| Dev tools included | Google Chrome, OpenCode CLI + OpenCode Desktop (both desktops); **VS Code** pre-installed in GNOME (install manually in Cinnamon via `sudo apt-get install code`) |
 | Session length | Automatic keep-alive per workflow run (up to 6 hours) |
 | Crash-resistant session | Direct `exec` without `Xsession`/`lightdm` wrappers + Mesa software rendering (fixes the "Oh no! Something has gone wrong" screen) |
-| Disconnect-safe upgrades | Full `upgrade` at build time + [`safe-upgrade`](scripts/safe-upgrade.sh) helper inside the session (holds CRD/desktop/systemd packages) |
+| Disconnect-safe upgrades | [`safe-upgrade`](scripts/safe-upgrade.sh) helper inside the session (holds CRD/desktop/systemd packages); GNOME workflow also runs full `upgrade` at build time |
 | Quiet installs | Needrestart apt hook disabled (`/etc/apt/apt.conf.d/99needrestart` removed) → no "Scanning processes..." output and no auto service restarts during any install/upgrade |
 | Catppuccin theme + Zafiro icons | Cinnamon workflow auto-extracts `cinnamon-theme.zip` → Catppuccin-B-LB-Dark theme + Zafiro-Nord-Black icon theme, applied via dconf |
 | Auto resolution 1600x1200 | Dual-layer: Xorg dummy config + xrandr auto-detect loop in session file |
 | Audio streaming | Chrome Remote Desktop natively streams audio from the remote session — no extra PulseAudio/PipeWire config needed |
 | Smooth remote experience | Mesa software rendering, direct exec session, disabled screensaver/lock → responsive desktop without crashes |
-| Zero-config setup | 3-step Quick Start: copy CRD command → run workflow → connect with PIN. No SSH, no port forwarding, no firewall config |
+| Zero-config setup | 4-step Quick Start: fork repo → copy CRD command → run workflow → connect with PIN. No SSH, no port forwarding, no firewall config |
 | Wallpaper included | Catppuccin **Black Unicat** preinstalled for the `runner` user on both desktops |
 | Desktop layout | Cinnamon: clean desktop (no shortcuts) — tools in the app menu; GNOME: shortcuts (Antigravity, VS Code, OpenCode, Safe Upgrade) |
 
@@ -51,9 +51,9 @@ Image sources: workflow status badges from GitHub Actions, technology badges fro
 
 ## Features at a glance
 
-### Easy Setup — 3 Steps, 5 Minutes
+### Easy Setup — 4 Steps, 5 Minutes
 
-No SSH keys, no port forwarding, no firewall rules. Just copy a CRD command from Google's page, paste it into a GitHub Actions workflow, and connect from your browser. The entire stack — desktop environment, browser, code editor, and remote access — installs automatically.
+No SSH keys, no port forwarding, no firewall rules. Fork this repository, copy a CRD command from Google's page, paste it into a GitHub Actions workflow in your fork, and connect from your browser. The entire stack — desktop environment, browser, code editor, and remote access — installs automatically.
 
 ### Smooth Remote Experience
 
@@ -79,13 +79,13 @@ The Cinnamon workflow ships with a premium look out of the box:
 
 ### Built-in Dev Tools
 
-| Tool | Purpose |
-|---|---|
-| Google Chrome | Full browser with extensions, profiles, and DevTools |
-| VS Code | Code editor with terminal, extensions, and remote development |
-| OpenCode CLI + Desktop | AI-powered coding assistant |
+| Tool | Purpose | Available in |
+|---|---|---|
+| Google Chrome | Full browser with extensions, profiles, and DevTools | Cinnamon + GNOME |
+| VS Code | Code editor with terminal, extensions, and remote development | **GNOME** only; install in Cinnamon via `sudo apt-get install code` |
+| OpenCode CLI + Desktop | AI-powered coding assistant | Cinnamon + GNOME |
 
-All tools are pre-installed and available from the application menu (Cinnamon) or desktop shortcuts (GNOME).
+GNOME provides desktop shortcuts (Antigravity, VS Code, OpenCode, Safe Upgrade). Cinnamon uses a clean desktop with tools in the application menu.
 
 ### Disconnect-Safe Upgrades
 
@@ -95,14 +95,23 @@ Running `sudo apt upgrade` inside a CRD session drops the connection (it restart
 - Upgrades everything else safely
 - A MOTD warning in both workflows (plus a **Safe Upgrade** shortcut on GNOME) prevents accidental `apt upgrade`
 
+`safe-upgrade` also ships with safety tooling beyond the basic upgrade:
+
+- **Version diff** — shows every upgraded package as `name: old_version → new_version`, plus newly installed and removed packages
+- **`--cleanup`** — runs `apt-get autoremove` after the upgrade to reclaim disk space
+- **Rollback tracking** — snapshots all package versions before and after to `/var/log/safe-upgrade-pre.log` and `/var/log/safe-upgrade-post.log`
+- **Summary table** — color-coded overview of upgraded / held / removed counts and duration
+- **Kernel reboot check** — warns you when a newer kernel was installed than the one currently running
+- **Interrupt-safe** — a `SIGINT`/`SIGTERM`/`EXIT` trap automatically releases the package holds if you abort mid-upgrade
+
 ---
 
 ## How it works
 
 ```mermaid
 flowchart LR
-    A["You: run workflow + paste CRD command"] --> B["GitHub Actions ubuntu-24.04"]
-    B --> C["Install: Cinnamon/GNOME, Chrome, VS Code, OpenCode, CRD"]
+    A["You: fork repo, run workflow + paste CRD command"] --> B["GitHub Actions ubuntu-24.04"]
+    B --> C["Install: Cinnamon/GNOME, Chrome, OpenCode, CRD (+ VS Code on GNOME)"]
     C --> D["Register host, PIN 123456"]
     D --> E["X11 session without LightDM"]
     E --> F["You connect via remotedesktop.google.com/access"]
@@ -112,6 +121,14 @@ flowchart LR
 
 ## Quick Start (5 minutes)
 
+Workflows use `workflow_dispatch`, so **you must run them from your own fork** — GitHub only allows you to trigger Actions on repositories you control.
+
+### 0. Fork this repository
+
+1. Go to <https://github.com/kiraadityaa/rich-linux-crd>.
+2. Click **Fork** (top-right) to create a copy under your GitHub account.
+3. All following steps happen in **your fork**.
+
 ### 1. Get the CRD host command
 
 1. Open <https://remotedesktop.google.com/headless> in a browser logged in to your Google account.
@@ -120,7 +137,7 @@ flowchart LR
 
 ### 2. Run the workflow
 
-1. Open the **Actions** tab in this repository.
+1. Open the **Actions** tab in **your fork**.
 2. Select a workflow:
    - **RICH LINUX (Cinnamon + Chrome Remote Desktop)** → file `.github/workflows/cinnamon.yml`
    - **RICH LINUX (GNOME + Chrome Remote Desktop)** → file `.github/workflows/gnome.yml`
@@ -148,9 +165,10 @@ flowchart LR
 | CRD session | `exec /usr/bin/cinnamon-session --session cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /usr/bin/gnome-session --session=ubuntu` + `LIBGL_ALWAYS_SOFTWARE=1` |
 | Display manager | Not used (headless) | Not used (headless) |
 | Desktop shortcuts | None (clean desktop) | Antigravity, VS Code, OpenCode, Safe Upgrade |
+| Dev tools | Chrome + OpenCode CLI/Desktop | Chrome + VS Code + OpenCode CLI/Desktop |
 | Screensaver, lock, suspend | Disabled (autostart + dconf no-lock, packages kept installed) | Disabled (dconf + gsettings no-lock, suspend set to `nothing`) |
 | Wallpaper | Catppuccin Black Unicat (via `org.cinnamon.desktop.background`) | Catppuccin Black Unicat (via `org.gnome.desktop.background`) |
-| Upgrades | Build-time full upgrade + `safe-upgrade` in session | Build-time full upgrade + `safe-upgrade` in session |
+| Upgrades | `safe-upgrade` in session (no build-time full upgrade — add via customization) | Build-time full upgrade + `safe-upgrade` in session |
 | Best for | Mint-style look, lighter footprint, premium theme | Maximum stability |
 
 ---
@@ -199,11 +217,13 @@ Cause: the upgrade also raises `chrome-remote-desktop` / `gnome-shell` / `mutter
 |---|---|
 | Safe daily upgrade (in the CRD terminal) | `safe-upgrade` (automatically holds critical packages, upgrades the rest) |
 | Preview without changing anything | `safe-upgrade --check` |
+| Upgrade + autoremove (reclaim disk) | `safe-upgrade --cleanup` |
 | Upgrade CRD/Chrome/desktop too (WILL DISCONNECT) | `safe-upgrade --allow-crd-restart` / `safe-upgrade --include-desktop` |
-| Get critical upgrades without disconnecting | Re-run the Actions workflow (it already runs a full `upgrade` at build time, before CRD starts) |
+| Get critical upgrades without disconnecting | Re-run the Actions workflow (GNOME runs a full `upgrade` at build time, before CRD starts) |
+| See which packages changed | Check the version diff in `safe-upgrade` output, or diff `/var/log/safe-upgrade-pre.log` vs `/var/log/safe-upgrade-post.log` |
 
 > [!TIP]
-> Implementation: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh). The GNOME workflow also installs a **Safe Upgrade** desktop shortcut; both workflows set a MOTD warning.
+> Implementation: [`scripts/safe-upgrade.sh`](scripts/safe-upgrade.sh). It ships with a color-coded **summary table**, **version diff** (old → new), **rollback logs** (`/var/log/safe-upgrade-pre.log` & `post.log`), a **kernel reboot check**, and an **interrupt-safe trap** that auto-releases package holds. The GNOME workflow also installs a **Safe Upgrade** desktop shortcut; both workflows set a MOTD warning.
 
 ---
 
@@ -218,9 +238,11 @@ rich-linux-crd/
 ├── assets/
 │   ├── architecture.svg        # Architecture diagram used in this README
 │   ├── cinnamon-theme.zip      # Catppuccin theme + Zafiro icons (auto-installed by Cinnamon workflow)
-│   └── rich-linux-crd-banner.svg
+│   ├── rich-linux-crd-banner.svg
+│   └── rich-linux-crd-logo.svg
 ├── scripts/
-│   └── safe-upgrade.sh  # Safe in-session upgrade (replacement for apt upgrade)
+│   └── safe-upgrade.sh  # Safe in-session upgrade (replacement for apt upgrade), with version diff,
+│                        # --cleanup autoremove, rollback logs, summary table, kernel reboot check
 ├── README.md            # This file (English)
 ├── README.id.md         # Indonesian summary
 ├── LICENSE
@@ -234,10 +256,10 @@ rich-linux-crd/
 | Need | How |
 |---|---|
 | Change PIN | Create a `CRD_PIN` repository secret (Settings → Secrets → Actions), 6+ digits |
-| Change the `runner` user password | Edit the `echo "runner:...` line in the workflow |
-| Add applications | Add a new `apt-get install` step before the CRD step (needrestart is already disabled, so it stays quiet) |
+| Change the `runner` user password | Edit the `echo "runner:...` line in the workflow (default `root` on both workflows) |
+| Add applications | Add a new `apt-get install` step before the CRD step, e.g. `apt-get install -y code` to add VS Code to Cinnamon (needrestart is already disabled, so it stays quiet) |
 | Change the wallpaper | Edit the download URL in the **Set Wallpaper** step of the workflow |
-| Change the display resolution | Edit the Xorg dummy config and xrandr commands in the **Configure CRD Cinnamon Session** step (STEP 09) of `cinnamon.yml` |
+| Change the display resolution | Edit the Xorg dummy config and xrandr commands in the **Configure CRD Cinnamon Session** step (STEP 08) of `cinnamon.yml` |
 | Change the theme | Replace `cinnamon-theme.zip` in `assets/` with your own theme archive (must contain `themes/` and `icons/` directories) |
 | Extend duration | Edit `sleep 21600` in the **Keep Alive** step (max 6 hours due to the Actions limit) |
 
@@ -246,11 +268,13 @@ rich-linux-crd/
 ## Notes
 
 - Workflows use `workflow_dispatch` — they only run when you trigger them manually.
+- GitHub only lets you run Actions on repos you control — **fork this repository first**, then trigger the workflows from your fork.
 - Never commit your CRD command to the repository (it contains a one-time auth code). Paste it only into the workflow input.
 - The default PIN `123456` is for convenience only. For serious use, set a custom `CRD_PIN`.
 - The GitHub Actions free tier has monthly minute limits — monitor Settings → Billing.
 - The Cinnamon workflow automatically installs the Catppuccin theme and Zafiro icons from `assets/cinnamon-theme.zip` — no manual setup required.
 - Display resolution is set to 1600x1200 via xrandr auto-detection in the Cinnamon session file.
+- `safe-upgrade` snapshots package versions before/after each run to `/var/log/safe-upgrade-pre.log` and `/var/log/safe-upgrade-post.log` — diff them to inspect exact changes.
 
 ---
 

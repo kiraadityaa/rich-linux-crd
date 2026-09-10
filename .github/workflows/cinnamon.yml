@@ -735,6 +735,11 @@ jobs:
           fi
           echo -e "${C_YELLOW}[INFO] CRD command valid ($(printf '%s' "$CRD_COMMAND_CLEAN" | wc -c) chars, contains start-host).${C_NC}"
 
+          # Ganti nama perangkat CRD agar tampil sebagai "cinnamon" (bukan hostname runner).
+          CRD_COMMAND_CLEAN="$(printf '%s' "$CRD_COMMAND_CLEAN" | sed -E 's/--name=[^ ]*//')"
+          CRD_COMMAND_CLEAN="$CRD_COMMAND_CLEAN --name=\"cinnamon\""
+          echo -e "${C_YELLOW}[INFO] CRD device name di-override menjadi 'cinnamon'.${C_NC}"
+
           echo -e "${C_YELLOW}[INFO] Registering host as user 'runner' (retry 3x jika OAuth transien)...${C_NC}"
 
           # Jalankan command CRD sebagai user runner.

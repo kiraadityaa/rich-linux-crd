@@ -272,6 +272,43 @@ rich-linux-crd/
 - Snap sengaja **dihapus permanen (purge + hold)** di kedua workflow. Alasannya: `thunderbird` di Ubuntu 24.04 adalah *deb transisi* yang post-install-nya memaksa `snap install thunderbird` — di runner tanpa akses store yang baik, ini retry 30 menit dan menahan seluruh install desktop. `snapd`, `thunderbird` (snap-transitional), dan `firefox` di-purge setelah install dan di-hold agar tidak bisa ter-reinstall diam-diam. Tradeoff yang jujur: `snap install` tidak tersedia, Snap Store tidak muncul lagi di GNOME Software (source apt tetap ada), dan `firefox` dicopot — Google Chrome tetap sebagai browser. Kalau butuh browser lain, install Firefox ESR atau Chromium via apt.
 - Workflow **XFCE Beta** (`xfce.yml`) memakai runner image `ubuntu-26.04` yang masih **public preview** (diumumkan Juni 2026). Belum seterbukti workflow 24.04; laporkan masalah ke issue tracker dengan nama workflow `xfce.yml`.
 - `safe-upgrade` menyimpan snapshot versi paket sebelum/sesudah di `/var/log/safe-upgrade-pre.log` dan `/var/log/safe-upgrade-post.log` — diff keduanya untuk melihat perubahan persis.
+- Proyek ini **hanya untuk penggunaan yang sah**. Lihat [Kebijakan Penggunaan & Disclaimer](#kebijakan-penggunaan--disclaimer).
+
+---
+
+## Kebijakan Penggunaan & Disclaimer
+
+**Proyek ini ditujukan semata-mata untuk penggunaan yang sah dan wajar** — belajar, pengembangan, menguji sistem yang Anda miliki atau diberi izin, serta kerja remote desktop umum. Desktop yang dikirim adalah lingkungan tujuan umum yang netral (browser, terminal, editor, tool virtualisasi); dipakai untuk hal yang sah atau ilegal sepenuhnya adalah tanggung jawab orang yang menjalankannya.
+
+### Tidak diperbolehkan (contoh konkret)
+
+Menggunakan proyek ini untuk hal-hal berikut dilarang:
+
+1. **Akses tanpa izin** — hacking, intrusion, cracking, pencurian kredensial/sesi terhadap sistem, akun, atau jaringan yang bukan milik Anda atau yang tidak berwenang Anda akses.
+2. **Serangan siber** — meluncurkan serangan DDoS, menjalankan botnet, spam flooding, atau kampanye phishing.
+3. **Malware** — membuat, menyebarkan, atau menghosting virus, ransomware, spyware, keylogger, atau perangkat lunak berbahaya lainnya.
+4. **Pencurian data & penipuan** — mencuri, menjual, atau memperdagangkan data/akun curian; penipuan identitas atau pembayaran; pemerasan.
+5. **Konten ilegal** — memiliki atau menyebarkan konten ilegal, termasuk materi pelecehan seksual anak (CSAM).
+6. **Penyalahgunaan resource** — mining mata uang kripto pada resource yang bukan milik Anda atau tanpa izin (termasuk menit Actions runner yang menjalankan workflow ini).
+7. **Pelanggaran terms of service** — apa pun yang melanggar GitHub Terms of Service, ketentuan Google Chrome Remote Desktop, lisensi Ubuntu/Microsoft, atau hukum lokal/nasional di wilayah hukum Anda.
+
+### Konsekuensi
+
+- **GitHub:** akun, repo, atau penggunaan Actions Anda bisa di-suspend/dihentikan karena pelanggaran ToS; menit bisa dicabut tanpa pengembalian.
+- **Google:** akun Google dan akses Chrome Remote Desktop Anda bisa dinonaktifkan.
+- **Hukum:** penyedia berhak melaporkan penyalahgunaan ke penegak hukum; Anda dapat menghadapi tuntutan pidana atau perdata sesuai hukum wilayah Anda — sepenuhnya menjadi tanggung jawab Anda.
+
+### Model fork = tanggung jawab Anda
+
+Saat Anda fork repo ini, workflow berjalan di bawah akun **Anda**, memakai menit Actions **Anda**, dan terdaftar ke akun Google **Anda**. Pengembang:
+
+- **tidak memiliki kontrol, visibilitas, atau keterlibatan** apa pun atas fork atau sesi pengguna;
+- tidak memantau, mencatat, atau mengakses sesi pengguna;
+- tidak dapat membantu, mendukung, atau memverifikasi penggunaan instance seseorang.
+
+Proyek ini disediakan **"AS-IS", tanpa jaminan apa pun**, di bawah Lisensi MIT. Pengembang **tidak bertanggung jawab** atas penyalahgunaan, kerugian, pelanggaran ToS, atau konsekuensi hukum apa pun yang timbul dari penggunaan atau fork proyek ini oleh siapa pun.
+
+Gunakan dengan bijak: bangun, pelajari, dan uji — tetapi hanya pada sistem dan resource yang berhak Anda gunakan.
 
 ---
 

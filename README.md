@@ -326,6 +326,43 @@ rich-linux-crd/
 - Snap is intentionally **removed and held** in both workflows. The reason: Ubuntu 24.04's `thunderbird` is a *transitional deb* whose post-install script forces `snap install thunderbird` — on a runner without proper snap-store access this retried for 30 minutes, stalling every desktop install. `snapd`, `thunderbird` (snap-transitional), and `firefox` are purged after install and held so nothing can silently reinstall them. Honest tradeoffs: `snap install` is unavailable, the Snap Store no longer appears in GNOME Software (apt sources remain), and `firefox` is removed — Google Chrome stays as the browser. If you ever need a full browser alternative, install Firefox ESR or Chromium via apt.
 - The **XFCE Beta** workflow (`xfce.yml`) uses the `ubuntu-26.04` runner image which is a GitHub **public preview** (announced June 2026). Expect it to be slightly less battle-tested than the 24.04 workflows; report issues to the issue tracker with the workflow name `xfce.yml`.
 - `safe-upgrade` snapshots package versions before/after each run to `/var/log/safe-upgrade-pre.log` and `/var/log/safe-upgrade-post.log` — diff them to inspect exact changes.
+- This project is intended for **lawful use only**. See [Acceptable Use & Legal Disclaimer](#acceptable-use--legal-disclaimer).
+
+---
+
+## Acceptable Use & Legal Disclaimer
+
+**This project is intended for lawful, legitimate use only** — learning, development, testing systems you own or are authorized to test, and general remote desktop work. The delivered desktop is a neutral, general-purpose environment (browser, terminal, editor, virtualization tools); whether it is used lawfully or not is entirely the responsibility of the person running it.
+
+### Not allowed (concrete examples)
+
+Using this project for any of the following is prohibited:
+
+1. **Unauthorized access** — hacking, intrusion, cracking, credential or session theft against systems, accounts, or networks you do not own or lack authorization to access.
+2. **Cyber attacks** — launching DDoS attacks, running botnets, spam flooding, or phishing campaigns.
+3. **Malware** — creating, distributing, or hosting viruses, ransomware, spyware, keyloggers, or other malicious software.
+4. **Data theft & fraud** — stealing, selling, or trading stolen data or accounts; identity or payment fraud; extortion.
+5. **Illegal content** — possessing or distributing illegal material, including child sexual abuse material (CSAM).
+6. **Unauthorized resource abuse** — cryptocurrency mining on resources you do not own or are not authorized to use (including the Actions minutes of the runner that runs this workflow).
+7. **Terms-of-service violations** — anything that breaches GitHub's Terms of Service, Google's Chrome Remote Desktop terms, Ubuntu/Microsoft licenses, or the local/national laws of your jurisdiction.
+
+### Consequences
+
+- **GitHub:** your account, repository, or Actions usage can be suspended or terminated for ToS violations; minutes can be revoked with no refund.
+- **Google:** your Google account and Chrome Remote Desktop access can be disabled.
+- **Legal:** providers retain the right to report abuse to law enforcement; you may face civil or criminal liability under the laws of your jurisdiction — fully on you.
+
+### The fork model means it is your responsibility
+
+When you fork this repository, the workflow runs under **your** GitHub account, consumes **your** Actions minutes, and registers to **your** Google account. The developer:
+
+- has **no control over, visibility into, or involvement with** any user's fork or session;
+- does not monitor, log, or access user sessions;
+- cannot assist with, condone, or verify the use of someone's instance.
+
+This project is provided **"AS-IS", without warranty of any kind**, under the MIT License. The developer **shall not be liable** for any misuse, damages, losses, ToS violations, or legal consequences arising from anyone's use or fork of this project.
+
+Use it wisely: build, learn, and test — but only on systems and resources you are entitled to use.
 
 ---
 

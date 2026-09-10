@@ -430,14 +430,24 @@ jobs:
           XDG_RUNTIME_DIR=/run/user/$RUNNER_UID
           LIBGL_ALWAYS_SOFTWARE=1
 
-          # Auto-detect display and set 1600x1200 resolution
-          for DISPLAY_NUM in \$(seq 0 5); do
-            if xrandr --display :\${DISPLAY_NUM} 2>/dev/null | grep -q " connected"; then
-              OUTPUT=\$(xrandr --display :\${DISPLAY_NUM} | grep " connected" | awk '{print \$1}')
-              xrandr --display :\${DISPLAY_NUM} --output \${OUTPUT} --mode 1600x1200 2>/dev/null || true
-              break
-            fi
+          # Auto-detect display and set 1600x1200 resolution.
+          # CRD selalu start Xorg di display >= 20 (FIRST_X_DISPLAY_NUMBER=20) dan
+          # sudah export DISPLAY+XAUTHORITY ke session -> pakai \$DISPLAY,
+          # bukan probe :0..:N. Dummy driver mengadvertise mode '1600x1200_60'.
+          OUTPUT=""
+          for DISPLAY_NUM in "\$DISPLAY" :20 :21 :22 :0; do
+            OUTPUT=\$(xrandr --display "\$DISPLAY_NUM" 2>/dev/null | grep " connected" | awk '{print \$1}' | head -n1)
+            [ -n "\$OUTPUT" ] && break
           done
+          if [ -n "\$OUTPUT" ]; then
+            MODE=\$(xrandr --display "\$DISPLAY" 2>/dev/null | grep -oE "1600x1200(_[0-9.]+)?" | head -n1)
+            if [ -z "\$MODE" ]; then
+              xrandr --display "\$DISPLAY" --newmode "1600x1200" 129.00 1600 1664 1856 2160 1200 1201 1204 1250 +HSync +VSync 2>/dev/null || true
+              xrandr --display "\$DISPLAY" --addmode "\$OUTPUT" 1600x1200 2>/dev/null || true
+              MODE=1600x1200
+            fi
+            xrandr --display "\$DISPLAY" --output "\$OUTPUT" --mode "\$MODE" 2>/dev/null || true
+          fi
 
           exec /usr/bin/cinnamon-session --session cinnamon
           EOF
@@ -447,6 +457,17 @@ jobs:
 
           sudo chmod +x \
             /home/runner/.chrome-remote-desktop-session
+
+          echo -e "${C_YELLOW}[INFO] Creating autostart fallback (re-apply 1600x1200 ~5s after desktop starts)...${C_NC}"
+          sudo -u runner mkdir -p /home/runner/.config/autostart
+          sudo -u runner tee /home/runner/.config/autostart/set-resolution.desktop > /dev/null <<EOF
+          [Desktop Entry]
+          Type=Application
+          Name=Set Resolution
+          Exec=sh -c "sleep 5; for o in \$(xrandr 2>/dev/null | grep -E \" connected\" | cut -d\" \" -f1); do xrandr --output \"\$o\" --mode 1600x1200_60 2>/dev/null || true; done"
+          X-GNOME-Autostart-enabled=true
+          Terminal=false
+          EOF
 
           echo "------------------------------------------------------------"
           cat /home/runner/.chrome-remote-desktop-session || true

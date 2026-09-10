@@ -40,6 +40,7 @@ Image sources: workflow status badges from GitHub Actions, technology badges fro
 | Crash-resistant session | Direct `exec` without `Xsession`/`lightdm` wrappers + Mesa software rendering (fixes the "Oh no! Something has gone wrong" screen) |
 | Disconnect-safe upgrades | [`safe-upgrade`](scripts/safe-upgrade.sh) helper inside the session (holds critical packages: CRD/Chrome, desktop shell, systemd/init, kernel); GNOME workflow also runs full `upgrade` at build time |
 | Quiet installs | Needrestart apt hook disabled (`/etc/apt/apt.conf.d/99needrestart` removed) → no "Scanning processes..." output and no auto service restarts during any install/upgrade |
+| No snap bloat | `snapd` + transitional `thunderbird`/`firefox` deb purged and held → no `snap` daemon, no 30-minute thunderbird-snap retry hang during desktop installs, and nothing can silently reinstall snaps; tradeoff: `snap install`/Snap Store unavailable (GNOME Software shows apt sources only) |
 | Catppuccin theme + Zafiro icons | Cinnamon workflow auto-extracts `cinnamon-theme.zip` → Catppuccin-B-LB-Dark theme + Zafiro-Nord-Black icon theme, applied via dconf |
 | Auto resolution 1600x1200 (Cinnamon + GNOME) | Dual-layer: Xorg dummy config + xrandr retry auto-detect loop in the session file, plus an autostart fallback script |
 | KVM virtualization | `/dev/kvm` exposed on the runner + QEMU/libvirt stack (virt-manager, GNOME Boxes) preinstalled; `runner` in `kvm` + `libvirt` groups → hardware-accelerated VMs inside the remote desktop |
@@ -305,6 +306,7 @@ rich-linux-crd/
 - The Cinnamon workflow automatically installs the Catppuccin theme and Zafiro icons from `assets/cinnamon-theme.zip` — no manual setup required.
 - Display resolution is set to 1600x1200 via xrandr auto-detection in the session file (both Cinnamon and GNOME).
 - KVM is exposed on this GitHub-hosted runner (`/dev/kvm`, Intel VT-x, nested = enabled) — used for **hardware-accelerated VMs** inside the desktop. It does not accelerate the CRD rendering itself, and availability can vary across GitHub runner fleets: if `/dev/kvm` is absent, the workflow only warns (no failure) and VMs would fall back to QEMU TCG (slow).
+- Snap is intentionally **removed and held** in both workflows. The reason: Ubuntu 24.04's `thunderbird` is a *transitional deb* whose post-install script forces `snap install thunderbird` — on a runner without proper snap-store access this retried for 30 minutes, stalling every desktop install. `snapd`, `thunderbird` (snap-transitional), and `firefox` are purged after install and held so nothing can silently reinstall them. Honest tradeoffs: `snap install` is unavailable, the Snap Store no longer appears in GNOME Software (apt sources remain), and `firefox` is removed — Google Chrome stays as the browser. If you ever need a full browser alternative, install Firefox ESR or Chromium via apt.
 - `safe-upgrade` snapshots package versions before/after each run to `/var/log/safe-upgrade-pre.log` and `/var/log/safe-upgrade-post.log` — diff them to inspect exact changes.
 
 ---

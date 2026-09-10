@@ -17,6 +17,7 @@ Dokumen utama (lengkap, dalam Bahasa Inggris): [README.md](README.md). Halaman i
 - **Virtualisasi KVM** — dukungan `/dev/kvm` (Intel VT-x) dimanfaatkan: QEMU/KVM + libvirt + virt-manager + GNOME Boxes siap pakai; user `runner` sudah masuk grup `kvm` dan `libvirt`.
 - **Audio streaming** — Chrome Remote Desktop menyiarkan audio dari sesi remote ke browser secara otomatis.
 - **Instalasi senyap** — hook needrestart dinonaktifkan, jadi tidak ada log `Scanning processes...` dan tidak ada restart layanan otomatis saat install/upgrade (mencegah sesi CRD putus).
+- **Tanpa snap** — `snapd` + deb transisi `thunderbird`/`firefox` di-purge dan di-hold, sehingga tidak ada hang "retry 30 menit ke snap store" saat install desktop. Tradeoff: `snap install` dan katalog Snap di GNOME Software tidak tersedia.
 
 ![Arsitektur: input pengguna mengalir melalui instalasi GitHub Actions dan registrasi CRD ke koneksi browser](assets/architecture.svg)
 
@@ -253,6 +254,7 @@ rich-linux-crd/
 - Workflow Cinnamon secara otomatis memasang tema Catppuccin dan ikon Zafiro dari `assets/cinnamon-theme.zip` — tidak perlu setup manual.
 - Resolusi tampilan di-set ke 1600x1200 via xrandr auto-detection di session file (baik Cinnamon maupun GNOME).
 - KVM tersedia di runner GitHub ini (`/dev/kvm`, Intel VT-x, nested = aktif) — dipakai untuk **VM berakselerasi hardware** di dalam desktop. Fitur ini tidak mempercepat rendering CRD itu sendiri, dan ketersediaannya bisa berbeda antar fleet runner GitHub: kalau `/dev/kvm` tidak ada, workflow hanya memperingatkan (tidak gagal) dan VM akan jatuh ke QEMU TCG (lambat).
+- Snap sengaja **dihapus permanen (purge + hold)** di kedua workflow. Alasannya: `thunderbird` di Ubuntu 24.04 adalah *deb transisi* yang post-install-nya memaksa `snap install thunderbird` — di runner tanpa akses store yang baik, ini retry 30 menit dan menahan seluruh install desktop. `snapd`, `thunderbird` (snap-transitional), dan `firefox` di-purge setelah install dan di-hold agar tidak bisa ter-reinstall diam-diam. Tradeoff yang jujur: `snap install` tidak tersedia, Snap Store tidak muncul lagi di GNOME Software (source apt tetap ada), dan `firefox` dicopot — Google Chrome tetap sebagai browser. Kalau butuh browser lain, install Firefox ESR atau Chromium via apt.
 - `safe-upgrade` menyimpan snapshot versi paket sebelum/sesudah di `/var/log/safe-upgrade-pre.log` dan `/var/log/safe-upgrade-post.log` — diff keduanya untuk melihat perubahan persis.
 
 ---

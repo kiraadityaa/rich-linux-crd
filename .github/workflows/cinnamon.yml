@@ -148,6 +148,17 @@ jobs:
           Pin-Priority: -1
           PREFE
 
+          # Blokir snapd + deb transisi (thunderbird/firefox -> snap). Ketiganya
+          # hanya Recommends (bukan Depends) dari cinnamon-desktop-environment,
+          # jadi aman di-skip. thunderbird transisi memaksa 'snap install
+          # thunderbird' + retry 30 menit ke store saat postinst (hang lama di
+          # runner). Pin dihapus lagi setelah install agar operasi apt lain normal.
+          sudo tee /etc/apt/preferences.d/99-no-snap.pref > /dev/null <<'PREFE'
+          Package: snapd thunderbird firefox
+          Pin: version *
+          Pin-Priority: -10
+          PREFE
+
           sudo NEEDRESTART_MODE=l DEBIAN_FRONTEND=noninteractive apt-get install -y \
             -o Dpkg::Options::="--force-confdef" \
             -o Dpkg::Options::="--force-confold" \
@@ -176,6 +187,16 @@ jobs:
             virtinst \
             virt-manager \
             gnome-boxes
+
+          sudo rm -f /etc/apt/preferences.d/99-no-snap.pref
+
+          # Hapus permanen snapd + deb transisi thunderbird/firefox. Tidak ada
+          # paket yang hard-Depends ke snapd di graph install ini (terverifikasi),
+          # jadi aman. Hold mencegah re-install oleh operasi apt berikutnya.
+          sudo apt-get purge -y snapd thunderbird firefox || true
+          sudo apt-mark hold snapd thunderbird firefox
+          sudo rm -rf /snap /var/snap /var/lib/snapd /root/snap /home/runner/snap 2>/dev/null || true
+          command -v snap >/dev/null 2>&1 && echo -e "${C_YELLOW}[WARN] snap masih ada.${C_NC}" || echo -e "${C_GREEN}[OK] snap dihapus permanen.${C_NC}"
 
           sudo rm -f /etc/apt/preferences.d/99-no-noto-heavy
           echo -e "${C_GREEN}[OK] Heavy Noto fonts (cjk / cjk-extra / extra) skipped (~285MB saved).${C_NC}"
@@ -920,6 +941,12 @@ jobs:
           command -v gnome-boxes || echo "[WARN] gnome-boxes missing"
           systemctl is-enabled libvirtd 2>/dev/null || true
           systemctl is-active libvirtd 2>/dev/null || true
+          echo "::endgroup::"
+
+          echo "::group::[CHECK] Snap removed"
+          command -v snap >/dev/null 2>&1 && echo -e "${C_YELLOW}[WARN] snap masih terpasang.${C_NC}" || echo -e "${C_GREEN}[OK] snap / snapd removed.${C_NC}"
+          dpkg -l thunderbird 2>/dev/null | grep -q ^ii && echo -e "${C_YELLOW}[WARN] thunderbird transisi masih terpasang.${C_NC}" || echo -e "${C_GREEN}[OK] thunderbird (snap transitional) removed.${C_NC}"
+          apt-mark showhold | grep -qx snapd && echo -e "${C_GREEN}[OK] snapd held (tidak akan re-install).${C_NC}" || echo -e "${C_YELLOW}[WARN] snapd tidak di-hold.${C_NC}"
           echo "::endgroup::"
 
           echo ""

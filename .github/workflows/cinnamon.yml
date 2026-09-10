@@ -420,7 +420,7 @@ jobs:
           EndSection
           XORGEOF
 
-          echo -e "${C_YELLOW}[INFO] Writing .chrome-remote-desktop-session (direct absolute-path exec + xrandr)...${C_NC}"
+          echo -e "${C_YELLOW}[INFO] Writing .chrome-remote-desktop-session (direct absolute-path exec + retry xrandr)...${C_NC}"
           sudo -u runner tee /home/runner/.chrome-remote-desktop-session > /dev/null <<EOF
           export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
           export NEEDRESTART_MODE=l
@@ -434,20 +434,26 @@ jobs:
           # CRD selalu start Xorg di display >= 20 (FIRST_X_DISPLAY_NUMBER=20) dan
           # sudah export DISPLAY+XAUTHORITY ke session -> pakai \$DISPLAY,
           # bukan probe :0..:N. Dummy driver mengadvertise mode '1600x1200_60'.
-          sleep 2
+          # Retry loop: Xorg mungkin belum siap menerima request saat file ini dieksekusi.
+          DISP=""
           OUTPUT=""
-          for DISPLAY_NUM in "\$DISPLAY" :20 :21 :22 :0; do
-            OUTPUT=\$(xrandr --display "\$DISPLAY_NUM" 2>/dev/null | grep " connected" | awk '{print \$1}' | head -n1)
-            [ -n "\$OUTPUT" ] && break
+          for try in 1 2 3 4 5 6 7 8 9 10; do
+            for D in "\$DISPLAY" :20 :21 :22 :0; do
+              OUT=\$(xrandr --display "\$D" 2>/dev/null | grep " connected" | awk '{print \$1}' | head -n1)
+              if [ -n "\$OUT" ]; then
+                DISP="\$D"; OUTPUT="\$OUT"; break 2
+              fi
+            done
+            sleep 1
           done
-          if [ -n "\$OUTPUT" ]; then
-            MODE=\$(xrandr --display "\$DISPLAY" 2>/dev/null | grep -oE "1600x1200(_[0-9.]+)?" | head -n1)
+          if [ -n "\$OUTPUT" ] && [ -n "\$DISP" ]; then
+            MODE=\$(xrandr --display "\$DISP" 2>/dev/null | grep -oE "1600x1200(_[0-9.]+)?" | head -n1)
             if [ -z "\$MODE" ]; then
-              xrandr --display "\$DISPLAY" --newmode "1600x1200" 129.00 1600 1664 1856 2160 1200 1201 1204 1250 +HSync +VSync 2>/dev/null || true
-              xrandr --display "\$DISPLAY" --addmode "\$OUTPUT" 1600x1200 2>/dev/null || true
+              xrandr --display "\$DISP" --newmode "1600x1200" 129.00 1600 1664 1856 2160 1200 1201 1204 1250 +HSync +VSync 2>/dev/null || true
+              xrandr --display "\$DISP" --addmode "\$OUTPUT" 1600x1200 2>/dev/null || true
               MODE=1600x1200
             fi
-            xrandr --display "\$DISPLAY" --output "\$OUTPUT" --mode "\$MODE" 2>/dev/null || true
+            xrandr --display "\$DISP" --output "\$OUTPUT" --mode "\$MODE" 2>/dev/null || true
           fi
 
           exec /usr/bin/cinnamon-session --session cinnamon
@@ -459,16 +465,32 @@ jobs:
           sudo chmod +x \
             /home/runner/.chrome-remote-desktop-session
 
-          echo -e "${C_YELLOW}[INFO] Creating autostart fallback (re-apply 1600x1200 ~5s after desktop starts)...${C_NC}"
+          echo -e "${C_YELLOW}[INFO] Creating autostart fallback (set-resolution.sh re-apply 1600x1200 after Muffin start)...${C_NC}"
+          sudo tee /usr/local/bin/set-resolution.sh > /dev/null <<'SHRES'
+          #!/bin/bash
+          # Fallback: re-apply 1600x1200 setelah desktop start (Muffin bisa reset mode).
+          WANT=1600x1200
+          sleep 4
+          for try in 1 2 3 4 5 6; do
+            for o in $(xrandr 2>/dev/null | grep " connected" | awk '{print $1}'); do
+              xrandr --output "$o" --mode 1600x1200_60 2>/dev/null || true
+              xrandr --output "$o" --mode "$WANT" 2>/dev/null || true
+            done
+            xrandr 2>/dev/null | grep -qE " connected.*$WANT" && exit 0
+            sleep 3
+          done
+          exit 0
+          SHRES
+          sudo chmod +x /usr/local/bin/set-resolution.sh
           sudo -u runner mkdir -p /home/runner/.config/autostart
-          sudo -u runner tee /home/runner/.config/autostart/set-resolution.desktop > /dev/null <<EOF
+          sudo -u runner tee /home/runner/.config/autostart/set-resolution.desktop > /dev/null <<'DEOR'
           [Desktop Entry]
           Type=Application
           Name=Set Resolution
-          Exec=sh -c "sleep 5; for o in \$(xrandr 2>/dev/null | grep -E \" connected\" | cut -d\" \" -f1); do xrandr --output \"\$o\" --mode 1600x1200_60 2>/dev/null || true; done"
+          Exec=/usr/local/bin/set-resolution.sh
           X-GNOME-Autostart-enabled=true
           Terminal=false
-          EOF
+          DEOR
 
           echo "------------------------------------------------------------"
           cat /home/runner/.chrome-remote-desktop-session || true

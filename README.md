@@ -19,6 +19,7 @@
   <img src="https://img.shields.io/badge/OpenCode-included-000000?style=flat-square" alt="OpenCode" />
   <img src="https://img.shields.io/badge/Theme-Catppuccin-green?style=flat-square" alt="Catppuccin Theme" />
   <img src="https://img.shields.io/badge/Resolution-1600x1200-blue?style=flat-square" alt="1600x1200" />
+  <img src="https://img.shields.io/badge/KVM-enabled-EE0000?style=flat-square&logo=linux&logoColor=white" alt="KVM enabled" />
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="MIT License" />
 </p>
 
@@ -40,7 +41,8 @@ Image sources: workflow status badges from GitHub Actions, technology badges fro
 | Disconnect-safe upgrades | [`safe-upgrade`](scripts/safe-upgrade.sh) helper inside the session (holds critical packages: CRD/Chrome, desktop shell, systemd/init, kernel); GNOME workflow also runs full `upgrade` at build time |
 | Quiet installs | Needrestart apt hook disabled (`/etc/apt/apt.conf.d/99needrestart` removed) → no "Scanning processes..." output and no auto service restarts during any install/upgrade |
 | Catppuccin theme + Zafiro icons | Cinnamon workflow auto-extracts `cinnamon-theme.zip` → Catppuccin-B-LB-Dark theme + Zafiro-Nord-Black icon theme, applied via dconf |
-| Auto resolution 1600x1200 (Cinnamon) | Dual-layer: Xorg dummy config + xrandr auto-detect loop in session file (GNOME uses the CRD default) |
+| Auto resolution 1600x1200 (Cinnamon + GNOME) | Dual-layer: Xorg dummy config + xrandr retry auto-detect loop in the session file, plus an autostart fallback script |
+| KVM virtualization | `/dev/kvm` exposed on the runner + QEMU/libvirt stack (virt-manager, GNOME Boxes) preinstalled; `runner` in `kvm` + `libvirt` groups → hardware-accelerated VMs inside the remote desktop |
 | Audio streaming | Chrome Remote Desktop natively streams audio from the remote session — no extra PulseAudio/PipeWire config needed |
 | Smooth remote experience | Mesa software rendering, direct exec session, disabled screensaver/lock → responsive desktop without crashes |
 | Zero-config setup | 4-step Quick Start: fork repo → copy CRD command → run workflow → connect with PIN. No SSH, no port forwarding, no firewall config |
@@ -62,7 +64,7 @@ Both Cinnamon and GNOME sessions are configured for headless operation:
 - **Direct exec** session files bypass LightDM/Xsession wrappers that cause the "Oh no! Something has gone wrong" crash
 - **Mesa software rendering** (`LIBGL_ALWAYS_SOFTWARE=1`) ensures the desktop renders correctly on GitHub Actions runners without a physical GPU
 - **Screensaver and lock disabled** — the session stays alive and responsive, never timing out or locking you out
-- **Auto resolution 1600x1200** (Cinnamon) — xrandr auto-detects the display and applies the optimal resolution
+- **Auto resolution 1600x1200** (Cinnamon + GNOME) — xrandr retry auto-detect in the session file applies the optimal resolution, with an autostart fallback script
 
 ### Audio Streaming
 
@@ -84,8 +86,31 @@ The Cinnamon workflow ships with a premium look out of the box:
 | Google Chrome | Full browser with extensions, profiles, and DevTools | Cinnamon + GNOME |
 | VS Code | Code editor with terminal, extensions, and remote development | **GNOME** only; install in Cinnamon via `sudo apt-get install code` |
 | OpenCode CLI + Desktop | AI-powered coding assistant | Cinnamon + GNOME |
+| Virtual Machine tools | QEMU/KVM, libvirt (`virsh`, `virt-install`), Virtual Machine Manager, GNOME Boxes | Cinnamon + GNOME |
 
 GNOME provides desktop shortcuts (Antigravity, VS Code, OpenCode, Safe Upgrade). Cinnamon uses a clean desktop with tools in the application menu.
+
+### KVM Hardware-Accelerated Virtualization
+
+This GitHub-hosted runner exposes `/dev/kvm` (Intel VT-x), so the desktop can run **real, hardware-accelerated virtual machines** — not slow software emulation. Both workflows install the full QEMU/libvirt stack and give the `runner` user direct access:
+
+- **QEMU/KVM** (`qemu-system-x86_64`, `/dev/kvm`) — hardware-accelerated CPU virtualization
+- **libvirt** (`libvirtd`, `virsh`, `virt-install`) — VM management daemon, enabled and started at build time
+- **Virtual Machine Manager** (`virt-manager`) — full-featured GUI to create/manage VMs
+- **GNOME Boxes** (`gnome-boxes`) — simple, beginner-friendly GUI
+
+Advantages:
+
+- Run any ISO (other Linux distros, BSD, evaluation Windows ISOs) inside your remote desktop at near-native CPU speed
+- Nested virtualization is enabled — useful when testing VT-x-dependent software (a VM inside a VM works)
+- Zero setup — `runner` already belongs to the `kvm` and `libvirt` groups; just open **Virtual Machine Manager** or **GNOME Boxes** → New VM → pick your ISO
+
+Honest limitations:
+
+- KVM does **not** accelerate the CRD session's own rendering — the desktop still uses Mesa software rendering (no physical GPU). Do not expect faster desktop UI or GPU acceleration from this feature.
+- No GPU passthrough. QEMU guests are best configured with a software/virtio display (e.g. `virtio-gpu` / QXL); 3D acceleration inside guests is limited.
+- The runner's vCPU/RAM budget is shared with your live CRD session — keep VMs modest in size.
+- `/dev/kvm` is present on the runner used to develop this project, but **not every GitHub-hosted runner guarantees it**. If `/dev/kvm` is missing, the workflow only prints a warning (it does not fail) and VMs would fall back to slow QEMU TCG emulation.
 
 ### Disconnect-Safe Upgrades
 
@@ -161,11 +186,12 @@ Workflows use `workflow_dispatch`, so **you must run them from your own fork** �
 | Look and feel | Classic, Linux Mint style | Modern Ubuntu style |
 | Install size | Approx. 1 GB | Approx. 2 GB |
 | Theme | Catppuccin-B-LB-Dark + Zafiro-Nord-Black icons (auto-installed) | Default Adwaita |
-| Resolution | Auto 1600x1200 via xrandr | CRD default |
+| Resolution | Auto 1600x1200 via xrandr (retry + autostart fallback) | Auto 1600x1200 via xrandr (retry + autostart fallback) |
 | CRD session | `exec /usr/bin/cinnamon-session --session cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /usr/bin/gnome-session --session=ubuntu` (auto-detects `ubuntu` > `gnome` > `gnome-xorg`) + `LIBGL_ALWAYS_SOFTWARE=1` |
 | Display manager | Not used (headless) | Not used (headless) |
 | Desktop shortcuts | None (clean desktop) | Antigravity, VS Code, OpenCode, Safe Upgrade |
 | Dev tools | Chrome + OpenCode CLI/Desktop | Chrome + VS Code + OpenCode CLI/Desktop |
+| Virtualization | QEMU/KVM + libvirt + virt-manager + GNOME Boxes | QEMU/KVM + libvirt + virt-manager + GNOME Boxes |
 | Screensaver, lock, suspend | Disabled (autostart + dconf no-lock, packages kept installed) | Disabled (dconf + gsettings no-lock, suspend set to `nothing`) |
 | Wallpaper | Catppuccin Black Unicat (via `org.cinnamon.desktop.background`) | Catppuccin Black Unicat (via `org.gnome.desktop.background`) |
 | Upgrades | `safe-upgrade` in session (no build-time full upgrade — add via customization) | Build-time full upgrade + `safe-upgrade` in session |
@@ -263,6 +289,7 @@ rich-linux-crd/
 | Add applications | Add a new `apt-get install` step before the CRD step, e.g. `apt-get install -y code` to add VS Code to Cinnamon (needrestart is already disabled, so it stays quiet) |
 | Change the wallpaper | Edit the download URL in the **Set Wallpaper** step of the workflow |
 | Change the display resolution | Edit the Xorg dummy config and xrandr commands in the **Configure CRD Cinnamon Session** step (STEP 08) of `cinnamon.yml` |
+| Manage virtual machines | Open **Virtual Machine Manager** or **GNOME Boxes** from the app menu → New VM → pick an ISO (`runner` already has `/dev/kvm` access) |
 | Change the theme | Replace `cinnamon-theme.zip` in `assets/` with your own theme archive (must contain `themes/` and `icons/` directories) |
 | Extend duration | Edit `sleep 21600` in the **Keep Alive** step (max 6 hours due to the Actions limit) |
 
@@ -276,7 +303,8 @@ rich-linux-crd/
 - The default PIN `123456` is for convenience only. For serious use, set a custom `CRD_PIN`.
 - The GitHub Actions free tier has monthly minute limits — monitor Settings → Billing.
 - The Cinnamon workflow automatically installs the Catppuccin theme and Zafiro icons from `assets/cinnamon-theme.zip` — no manual setup required.
-- Display resolution is set to 1600x1200 via xrandr auto-detection in the Cinnamon session file.
+- Display resolution is set to 1600x1200 via xrandr auto-detection in the session file (both Cinnamon and GNOME).
+- KVM is exposed on this GitHub-hosted runner (`/dev/kvm`, Intel VT-x, nested = enabled) — used for **hardware-accelerated VMs** inside the desktop. It does not accelerate the CRD rendering itself, and availability can vary across GitHub runner fleets: if `/dev/kvm` is absent, the workflow only warns (no failure) and VMs would fall back to QEMU TCG (slow).
 - `safe-upgrade` snapshots package versions before/after each run to `/var/log/safe-upgrade-pre.log` and `/var/log/safe-upgrade-post.log` — diff them to inspect exact changes.
 
 ---

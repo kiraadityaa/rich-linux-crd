@@ -219,7 +219,7 @@ jobs:
           sudo usermod -aG sudo runner
 
           echo -e "${C_YELLOW}[INFO] Gibah akses KVM + libvirt ke runner...${C_NC}"
-          sudo usermod -aG kvm runner
+          sudo usermod -aG kvm runner || echo -e "${C_YELLOW}[WARN] group 'kvm' tidak ada di runner ini (KVM off).${C_NC}"
           sudo usermod -aG libvirt runner || true
           getent group kvm libvirt || true
           if sudo -u runner test -r /dev/kvm && sudo -u runner test -w /dev/kvm; then
@@ -912,7 +912,7 @@ jobs:
           if sudo -u runner test -r /dev/kvm && sudo -u runner test -w /dev/kvm; then
             echo -e "${C_GREEN}[OK] runner dapat mengakses /dev/kvm.${C_NC}"
           else
-            echo -e "${C_RED}[FAIL] runner tidak bisa akses /dev/kvm (grup kvm/libvirt).${C_NC}"
+            echo -e "${C_YELLOW}[WARN] runner tidak bisa akses /dev/kvm - instalasi tetap OK; KVM off di runner ini (lihat README, bagian KVM).${C_NC}"
           fi
           command -v qemu-system-x86_64 || echo "[WARN] qemu-system-x86_64 missing"
           command -v virsh || echo "[WARN] virsh missing"

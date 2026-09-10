@@ -13,7 +13,8 @@ Dokumen utama (lengkap, dalam Bahasa Inggris): [README.md](README.md). Halaman i
 **Fitur cepat:**
 - **Setup 4 langkah, 5 menit** — fork repo → salin perintah CRD → jalankan workflow → konek dari browser. Tanpa SSH, tanpa port forwarding, tanpa firewall.
 - **Tema Catppuccin + Ikon Zafiro** — workflow Cinnamon otomatis memasang tema Catppuccin-B-LB-Dark dan ikon Zafiro-Nord-Black.
-- **Resolusi otomatis 1600x1200** (Cinnamon) — xrandr auto-detect tampilan dan menerapkan resolusi optimal (GNOME memakai default CRD).
+- **Resolusi otomatis 1600x1200** (Cinnamon + GNOME) — xrandr auto-detect tampilan dan menerapkan resolusi optimal, plus fallback autostart.
+- **Virtualisasi KVM** — dukungan `/dev/kvm` (Intel VT-x) dimanfaatkan: QEMU/KVM + libvirt + virt-manager + GNOME Boxes siap pakai; user `runner` sudah masuk grup `kvm` dan `libvirt`.
 - **Audio streaming** — Chrome Remote Desktop menyiarkan audio dari sesi remote ke browser secara otomatis.
 - **Instalasi senyap** — hook needrestart dinonaktifkan, jadi tidak ada log `Scanning processes...` dan tidak ada restart layanan otomatis saat install/upgrade (mencegah sesi CRD putus).
 
@@ -34,7 +35,7 @@ Sesi Cinnamon dan GNOME dikonfigurasi untuk operasi headless:
 - **Direct exec** — session file melewati wrapper LightDM/Xsession yang menyebabkan crash "Oh no! Something has gone wrong"
 - **Mesa software rendering** (`LIBGL_ALWAYS_SOFTWARE=1`) memastikan desktop render dengan benar di GitHub Actions runner tanpa GPU fisik
 - **Screensaver dan lock dinonaktifkan** — sesi tetap hidup dan responsif, tidak pernah timeout atau mengunci Anda keluar
-- **Resolusi otomatis 1600x1200** (Cinnamon) — xrandr auto-detect tampilan dan menerapkan resolusi optimal
+- **Resolusi otomatis 1600x1200** (Cinnamon + GNOME) — xrandr auto-detect tampilan dan menerapkan resolusi optimal, plus fallback autostart
 
 ### Audio Streaming
 
@@ -56,8 +57,31 @@ Workflow Cinnamon hadir dengan tampilan premium langsung dari awal:
 | Google Chrome | Browser lengkap dengan ekstensi, profil, dan DevTools | Cinnamon + GNOME |
 | VS Code | Code editor dengan terminal, ekstensi, dan remote development | **GNOME saja**; untuk Cinnamon pasang via `sudo apt-get install code` |
 | OpenCode CLI + Desktop | Asisten coding bertenaga AI | Cinnamon + GNOME |
+| Virtual Machine tools | QEMU/KVM, libvirt (`virsh`, `virt-install`), virt-manager, GNOME Boxes | Cinnamon + GNOME |
 
 GNOME menyediakan shortcut desktop (Antigravity, VS Code, OpenCode, Safe Upgrade). Cinnamon menggunakan desktop bersih dengan tool di menu aplikasi.
+
+### Virtualisasi KVM (Hardware-Accelerated VM)
+
+Runner GitHub ini mengekspos `/dev/kvm` (Intel VT-x), jadi desktop bisa menjalankan **VM berakselerasi hardware** — bukan emulasi software yang lambat. Kedua workflow memasang stack QEMU/libvirt dan memberi akses langsung ke user `runner`:
+
+- **QEMU/KVM** (`qemu-system-x86_64`, `/dev/kvm`) — virtualisasi CPU berakselerasi hardware
+- **libvirt** (`libvirtd`, `virsh`, `virt-install`) — daemon manajemen VM, aktif saat build
+- **Virtual Machine Manager** (`virt-manager`) — GUI lengkap untuk membuat/mengelola VM
+- **GNOME Boxes** (`gnome-boxes`) — GUI sederhana untuk pemula
+
+Kelebihan:
+
+- Jalankan ISO apa pun (distro Linux lain, BSD, ISO Windows evaluasi) di dalam desktop remote dengan kecepatan CPU mendekati native
+- Nested virtualization aktif — berguna untuk mengetes software yang butuh VT-x (VM di dalam VM bisa jalan)
+- Tanpa setup — `runner` sudah masuk grup `kvm` + `libvirt`; tinggal buka **Virtual Machine Manager** atau **GNOME Boxes** → New VM → pilih ISO
+
+Keterbatasan yang jujur:
+
+- KVM **tidak** mempercepat rendering sesi CRD itu sendiri — desktop tetap memakai Mesa software rendering (tanpa GPU fisik). Jangan berharap UI desktop lebih cepat atau GPU acceleration dari fitur ini.
+- Tidak ada GPU passthrough. VM sebaiknya memakai display software/virtio (mis. `virtio-gpu` / QXL); akselerasi 3D di dalam guest terbatas.
+- Budget vCPU/RAM runner terbatas dan dipakai bersama sesi CRD yang sedang hidup — buat VM dengan ukuran wajar.
+- `/dev/kvm` ada di runner tempat proyek ini dikembangkan, tetapi **tidak semua runner GitHub dijamin punya**. Kalau tidak ada, workflow hanya memberi peringatan (tidak gagal) dan VM akan jatuh ke emulasi QEMU TCG yang lambat.
 
 ### Upgrade Anti-Putus
 
@@ -119,11 +143,12 @@ Workflow memakai `workflow_dispatch`, jadi **harus dijalankan dari fork milik An
 | Tampilan | Klasik ala Linux Mint | Modern ala Ubuntu |
 | Ukuran install | Sekitar 1 GB | Sekitar 2 GB |
 | Tema | Catppuccin-B-LB-Dark + ikon Zafiro-Nord-Black (otomatis) | Adwaita default |
-| Resolusi | Otomatis 1600x1200 via xrandr | Default CRD |
+| Resolusi | Otomatis 1600x1200 via xrandr (retry + fallback autostart) | Otomatis 1600x1200 via xrandr (retry + fallback autostart) |
 | Sesi CRD | `exec /usr/bin/cinnamon-session --session cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /usr/bin/gnome-session --session=ubuntu` (auto-detect `ubuntu` > `gnome` > `gnome-xorg`) + `LIBGL_ALWAYS_SOFTWARE=1` |
 | Display manager | Tidak dipakai (headless) | Tidak dipakai (headless) |
 | Shortcut desktop | Tidak ada (desktop bersih) | Antigravity, VS Code, OpenCode, Safe Upgrade |
 | Dev tools | Chrome + OpenCode CLI/Desktop | Chrome + VS Code + OpenCode CLI/Desktop |
+| Virtualisasi | QEMU/KVM + libvirt + virt-manager + GNOME Boxes | QEMU/KVM + libvirt + virt-manager + GNOME Boxes |
 | Screensaver, lock, suspend | Dinonaktifkan | Dinonaktifkan |
 | Wallpaper | Catppuccin Black Unicat (via `org.cinnamon.desktop.background`) | Catppuccin Black Unicat (via `org.gnome.desktop.background`) |
 | Upgrade | `safe-upgrade` di sesi (tanpa build-time full upgrade — bisa ditambah via kustomisasi) | Full upgrade di build-time + `safe-upgrade` di sesi |
@@ -212,6 +237,7 @@ rich-linux-crd/
 | Tambah aplikasi | Tambah step `apt-get install` baru sebelum step CRD, mis. `apt-get install -y code` untuk menambah VS Code di Cinnamon (needrestart sudah dinonaktifkan, jadi tetap senyap) |
 | Ganti wallpaper | Edit URL download di step **Set Wallpaper** di workflow |
 | Ganti resolusi tampilan | Edit config dummy Xorg dan perintah xrandr di step **Configure CRD Cinnamon Session** (STEP 08) di `cinnamon.yml` |
+| Kelola virtual machine | Buka **Virtual Machine Manager** atau **GNOME Boxes** dari menu aplikasi → New VM → pilih ISO (`runner` sudah punya akses `/dev/kvm`) |
 | Ganti tema | Ganti `cinnamon-theme.zip` di `assets/` dengan tema Anda sendiri (harus berisi direktori `themes/` dan `icons/`) |
 | Perpanjang durasi | Edit `sleep 21600` di step **Keep Alive** (maks 6 jam karena limit Actions) |
 
@@ -225,7 +251,8 @@ rich-linux-crd/
 - PIN default `123456` hanya untuk kemudahan. Untuk penggunaan serius, buat `CRD_PIN` custom.
 - GitHub Actions free tier punya batas menit bulanan — pantau Settings → Billing.
 - Workflow Cinnamon secara otomatis memasang tema Catppuccin dan ikon Zafiro dari `assets/cinnamon-theme.zip` — tidak perlu setup manual.
-- Resolusi tampilan di-set ke 1600x1200 via xrandr auto-detection di session file Cinnamon.
+- Resolusi tampilan di-set ke 1600x1200 via xrandr auto-detection di session file (baik Cinnamon maupun GNOME).
+- KVM tersedia di runner GitHub ini (`/dev/kvm`, Intel VT-x, nested = aktif) — dipakai untuk **VM berakselerasi hardware** di dalam desktop. Fitur ini tidak mempercepat rendering CRD itu sendiri, dan ketersediaannya bisa berbeda antar fleet runner GitHub: kalau `/dev/kvm` tidak ada, workflow hanya memperingatkan (tidak gagal) dan VM akan jatuh ke QEMU TCG (lambat).
 - `safe-upgrade` menyimpan snapshot versi paket sebelum/sesudah di `/var/log/safe-upgrade-pre.log` dan `/var/log/safe-upgrade-post.log` — diff keduanya untuk melihat perubahan persis.
 
 ---

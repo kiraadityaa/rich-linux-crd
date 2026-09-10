@@ -13,7 +13,7 @@ Dokumen utama (lengkap, dalam Bahasa Inggris): [README.md](README.md). Halaman i
 **Fitur cepat:**
 - **Setup 4 langkah, 5 menit** — fork repo → salin perintah CRD → jalankan workflow → konek dari browser. Tanpa SSH, tanpa port forwarding, tanpa firewall.
 - **Tema Catppuccin + Ikon Zafiro** — workflow Cinnamon otomatis memasang tema Catppuccin-B-LB-Dark dan ikon Zafiro-Nord-Black.
-- **Resolusi otomatis 1600x1200** — xrandr auto-detect tampilan dan menerapkan resolusi optimal.
+- **Resolusi otomatis 1600x1200** (Cinnamon) — xrandr auto-detect tampilan dan menerapkan resolusi optimal (GNOME memakai default CRD).
 - **Audio streaming** — Chrome Remote Desktop menyiarkan audio dari sesi remote ke browser secara otomatis.
 - **Instalasi senyap** — hook needrestart dinonaktifkan, jadi tidak ada log `Scanning processes...` dan tidak ada restart layanan otomatis saat install/upgrade (mencegah sesi CRD putus).
 
@@ -120,7 +120,7 @@ Workflow memakai `workflow_dispatch`, jadi **harus dijalankan dari fork milik An
 | Ukuran install | Sekitar 1 GB | Sekitar 2 GB |
 | Tema | Catppuccin-B-LB-Dark + ikon Zafiro-Nord-Black (otomatis) | Adwaita default |
 | Resolusi | Otomatis 1600x1200 via xrandr | Default CRD |
-| Sesi CRD | `exec /usr/bin/cinnamon-session --session cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /usr/bin/gnome-session --session=ubuntu` + `LIBGL_ALWAYS_SOFTWARE=1` |
+| Sesi CRD | `exec /usr/bin/cinnamon-session --session cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /usr/bin/gnome-session --session=ubuntu` (auto-detect `ubuntu` > `gnome` > `gnome-xorg`) + `LIBGL_ALWAYS_SOFTWARE=1` |
 | Display manager | Tidak dipakai (headless) | Tidak dipakai (headless) |
 | Shortcut desktop | Tidak ada (desktop bersih) | Antigravity, VS Code, OpenCode, Safe Upgrade |
 | Dev tools | Chrome + OpenCode CLI/Desktop | Chrome + VS Code + OpenCode CLI/Desktop |
@@ -128,6 +128,35 @@ Workflow memakai `workflow_dispatch`, jadi **harus dijalankan dari fork milik An
 | Wallpaper | Catppuccin Black Unicat (via `org.cinnamon.desktop.background`) | Catppuccin Black Unicat (via `org.gnome.desktop.background`) |
 | Upgrade | `safe-upgrade` di sesi (tanpa build-time full upgrade — bisa ditambah via kustomisasi) | Full upgrade di build-time + `safe-upgrade` di sesi |
 | Cocok untuk | Tampilan ala Mint, ukuran lebih ringan, tema premium | Stabilitas maksimal |
+
+---
+
+## Troubleshooting: Error "Oh no! Something has gone wrong"
+
+Gejala: PIN benar dan koneksi berhasil, tapi layar menampilkan wajah sedih dengan tombol **Log Out**.
+
+Penyebab: session file lama memakai wrapper `lightdm-session` yang membutuhkan LightDM seat fisik — tidak ada di runner CRD yang headless.
+
+Solusi sudah diterapkan di kedua workflow (direct exec tanpa wrapper, plus paket Mesa/LLVMPipe untuk software rendering):
+
+```bash
+# Cinnamon
+DESKTOP_SESSION=cinnamon
+XDG_CURRENT_DESKTOP=X-Cinnamon
+XDG_SESSION_TYPE=x11
+XDG_RUNTIME_DIR=/run/user/$(id -u)
+LIBGL_ALWAYS_SOFTWARE=1
+exec /usr/bin/cinnamon-session --session cinnamon
+
+# GNOME (auto-detect ubuntu > gnome > gnome-xorg)
+DESKTOP_SESSION=ubuntu
+XDG_CURRENT_DESKTOP=ubuntu:GNOME
+XDG_SESSION_TYPE=x11
+XDG_RUNTIME_DIR=/run/user/$(id -u)
+LIBGL_ALWAYS_SOFTWARE=1
+MUTTER_DEBUG_FORCE_SOFTWARE_RENDER=1
+exec /usr/bin/gnome-session --session=ubuntu
+```
 
 ---
 
@@ -163,6 +192,7 @@ rich-linux-crd/
 │   ├── cinnamon-theme.zip   # Tema Catppuccin + ikon Zafiro (otomatis diinstal oleh workflow Cinnamon)
 │   ├── rich-linux-crd-banner.svg
 │   └── rich-linux-crd-logo.svg
+├── opencode-setup/          # opencode-skills.md (panduan skill agent OpenCode + Context7)
 ├── scripts/                 # safe-upgrade.sh (version diff, --cleanup, rollback log, summary, reboot check)
 ├── README.md                # Dokumen utama (Inggris)
 ├── README.id.md             # File ini (Indonesia)

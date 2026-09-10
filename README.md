@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/Cinnamon-Full-success?style=flat-square" alt="Cinnamon" />
   <img src="https://img.shields.io/badge/GNOME-Stable-blue?style=flat-square&logo=gnome&logoColor=white" alt="GNOME" />
   <img src="https://img.shields.io/badge/Chrome_Remote_Desktop-ready-4285F4?style=flat-square&logo=googlechrome&logoColor=white" alt="Chrome Remote Desktop" />
-  <img src="https://img.shields.io/badge/VS_Code-included-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code" />
+  <img src="https://img.shields.io/badge/VS_Code-GNOME-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" alt="VS Code (GNOME)" />
   <img src="https://img.shields.io/badge/OpenCode-included-000000?style=flat-square" alt="OpenCode" />
   <img src="https://img.shields.io/badge/Theme-Catppuccin-green?style=flat-square" alt="Catppuccin Theme" />
   <img src="https://img.shields.io/badge/Resolution-1600x1200-blue?style=flat-square" alt="1600x1200" />
@@ -37,10 +37,10 @@ Image sources: workflow status badges from GitHub Actions, technology badges fro
 | Dev tools included | Google Chrome, OpenCode CLI + OpenCode Desktop (both desktops); **VS Code** pre-installed in GNOME (install manually in Cinnamon via `sudo apt-get install code`) |
 | Session length | Automatic keep-alive per workflow run (up to 6 hours) |
 | Crash-resistant session | Direct `exec` without `Xsession`/`lightdm` wrappers + Mesa software rendering (fixes the "Oh no! Something has gone wrong" screen) |
-| Disconnect-safe upgrades | [`safe-upgrade`](scripts/safe-upgrade.sh) helper inside the session (holds CRD/desktop/systemd packages); GNOME workflow also runs full `upgrade` at build time |
+| Disconnect-safe upgrades | [`safe-upgrade`](scripts/safe-upgrade.sh) helper inside the session (holds critical packages: CRD/Chrome, desktop shell, systemd/init, kernel); GNOME workflow also runs full `upgrade` at build time |
 | Quiet installs | Needrestart apt hook disabled (`/etc/apt/apt.conf.d/99needrestart` removed) → no "Scanning processes..." output and no auto service restarts during any install/upgrade |
 | Catppuccin theme + Zafiro icons | Cinnamon workflow auto-extracts `cinnamon-theme.zip` → Catppuccin-B-LB-Dark theme + Zafiro-Nord-Black icon theme, applied via dconf |
-| Auto resolution 1600x1200 | Dual-layer: Xorg dummy config + xrandr auto-detect loop in session file |
+| Auto resolution 1600x1200 (Cinnamon) | Dual-layer: Xorg dummy config + xrandr auto-detect loop in session file (GNOME uses the CRD default) |
 | Audio streaming | Chrome Remote Desktop natively streams audio from the remote session — no extra PulseAudio/PipeWire config needed |
 | Smooth remote experience | Mesa software rendering, direct exec session, disabled screensaver/lock → responsive desktop without crashes |
 | Zero-config setup | 4-step Quick Start: fork repo → copy CRD command → run workflow → connect with PIN. No SSH, no port forwarding, no firewall config |
@@ -162,7 +162,7 @@ Workflows use `workflow_dispatch`, so **you must run them from your own fork** �
 | Install size | Approx. 1 GB | Approx. 2 GB |
 | Theme | Catppuccin-B-LB-Dark + Zafiro-Nord-Black icons (auto-installed) | Default Adwaita |
 | Resolution | Auto 1600x1200 via xrandr | CRD default |
-| CRD session | `exec /usr/bin/cinnamon-session --session cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /usr/bin/gnome-session --session=ubuntu` + `LIBGL_ALWAYS_SOFTWARE=1` |
+| CRD session | `exec /usr/bin/cinnamon-session --session cinnamon` + `LIBGL_ALWAYS_SOFTWARE=1` | `exec /usr/bin/gnome-session --session=ubuntu` (auto-detects `ubuntu` > `gnome` > `gnome-xorg`) + `LIBGL_ALWAYS_SOFTWARE=1` |
 | Display manager | Not used (headless) | Not used (headless) |
 | Desktop shortcuts | None (clean desktop) | Antigravity, VS Code, OpenCode, Safe Upgrade |
 | Dev tools | Chrome + OpenCode CLI/Desktop | Chrome + VS Code + OpenCode CLI/Desktop |
@@ -240,6 +240,8 @@ rich-linux-crd/
 │   ├── cinnamon-theme.zip      # Catppuccin theme + Zafiro icons (auto-installed by Cinnamon workflow)
 │   ├── rich-linux-crd-banner.svg
 │   └── rich-linux-crd-logo.svg
+├── opencode-setup/
+│   └── opencode-skills.md      # OpenCode agent skills + Context7 setup guide
 ├── scripts/
 │   └── safe-upgrade.sh  # Safe in-session upgrade (replacement for apt upgrade), with version diff,
 │                        # --cleanup autoremove, rollback logs, summary table, kernel reboot check

@@ -710,30 +710,123 @@ jobs:
             || { echo -e "${C_RED}[FAIL] Gagal mengunduh wallpaper.${C_NC}"; exit 1; }
           sudo chown runner:runner /home/runner/Pictures/wallpaper.png
 
-          echo -e "${C_YELLOW}[INFO] Setting wallpaper via xfconf (xfce4-desktop backdrop)...${C_NC}"
-          # dbus-run-session menyediakan session dbus sementara agar xfconf
-          # menulis ke config user 'runner'. Nama monitor bisa berbeda
-          # (DUMMY0/monitor0) -> set untuk beberapa kandidat + fallback '*'.
-          WALL="file:///home/runner/Pictures/wallpaper.png"
-          for MON in monitor0 monitorDUMMY0 DUMMY0 eDP-1 HDMI-1; do
-            for WS in 0 1 2 3; do
-              sudo -u runner dbus-run-session -- xfconf-query -c xfce4-desktop -p "/backdrop/screen0/${MON}/workspace${WS}/last-image" -s "$WALL" 2>/dev/null || true
-              sudo -u runner dbus-run-session -- xfconf-query -c xfce4-desktop -p "/backdrop/screen0/${MON}/workspace${WS}/image-style" -s 5 2>/dev/null || true
-            done
+          echo -e "${C_YELLOW}[INFO] Setting wallpaper via xfce4-desktop.xml (direct write, path polos)...${C_NC}"
+          # Menulis xfce4-desktop.xml langsung (BUKAN xfconf-query), karena:
+          #  1) provisioning tidak punya session dbus; xfconf-query -s TANPA
+          #     --create gagal diam-diam ("property does not exist ... use the
+          #     --create option"), dan error ditelan `2>/dev/null || true`.
+          #  2) xfdesktop 4.20 menolak URI "file://..." di last-image (diproses
+          #     sebagai path relatif -> "Failed to load image file '...file:/...'");
+          #     wajib path polos. Struktur di bawah = hasil verifikasi live.
+          sudo -u runner mkdir -p /home/runner/.config/xfce4/xfconf/xfce-perchannel-xml
+          sudo -u runner tee /home/runner/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml > /dev/null <<'WXML'
+          <?xml version="1.1" encoding="UTF-8"?>
+
+          <channel name="xfce4-desktop" version="1.0">
+            <property name="last-settings-migration-version" type="uint" value="1"/>
+            <property name="backdrop" type="empty">
+              <property name="screen0" type="empty">
+                <property name="monitor0" type="empty">
+                  <property name="workspace0" type="empty">
+                    <property name="last-image" type="string" value="/home/runner/Pictures/wallpaper.png"/>
+                    <property name="image-style" type="int" value="5"/>
+                    <property name="image-show" type="bool" value="true"/>
+                    <property name="color-style" type="int" value="0"/>
+                  </property>
+                  <property name="workspace1" type="empty">
+                    <property name="last-image" type="string" value="/home/runner/Pictures/wallpaper.png"/>
+                    <property name="image-style" type="int" value="5"/>
+                    <property name="image-show" type="bool" value="true"/>
+                    <property name="color-style" type="int" value="0"/>
+                  </property>
+                  <property name="workspace2" type="empty">
+                    <property name="last-image" type="string" value="/home/runner/Pictures/wallpaper.png"/>
+                    <property name="image-style" type="int" value="5"/>
+                    <property name="image-show" type="bool" value="true"/>
+                    <property name="color-style" type="int" value="0"/>
+                  </property>
+                  <property name="workspace3" type="empty">
+                    <property name="last-image" type="string" value="/home/runner/Pictures/wallpaper.png"/>
+                    <property name="image-style" type="int" value="5"/>
+                    <property name="image-show" type="bool" value="true"/>
+                    <property name="color-style" type="int" value="0"/>
+                  </property>
+                  <property name="image-path" type="string" value="/home/runner/Pictures/wallpaper.png"/>
+                </property>
+                <property name="monitorDUMMY0" type="empty">
+                  <property name="workspace0" type="empty">
+                    <property name="last-image" type="string" value="/home/runner/Pictures/wallpaper.png"/>
+                    <property name="image-style" type="int" value="5"/>
+                    <property name="image-show" type="bool" value="true"/>
+                    <property name="color-style" type="int" value="0"/>
+                  </property>
+                  <property name="workspace1" type="empty">
+                    <property name="last-image" type="string" value="/home/runner/Pictures/wallpaper.png"/>
+                    <property name="image-style" type="int" value="5"/>
+                    <property name="image-show" type="bool" value="true"/>
+                    <property name="color-style" type="int" value="0"/>
+                  </property>
+                  <property name="workspace2" type="empty">
+                    <property name="last-image" type="string" value="/home/runner/Pictures/wallpaper.png"/>
+                    <property name="image-style" type="int" value="5"/>
+                    <property name="image-show" type="bool" value="true"/>
+                    <property name="color-style" type="int" value="0"/>
+                  </property>
+                  <property name="workspace3" type="empty">
+                    <property name="last-image" type="string" value="/home/runner/Pictures/wallpaper.png"/>
+                    <property name="image-style" type="int" value="5"/>
+                    <property name="image-show" type="bool" value="true"/>
+                    <property name="color-style" type="int" value="0"/>
+                  </property>
+                  <property name="image-path" type="string" value="/home/runner/Pictures/wallpaper.png"/>
+                </property>
+              </property>
+              <property name="single-workspace-mode" type="bool" value="true"/>
+            </property>
+          </channel>
+          WXML
+          sudo chown runner:runner /home/runner/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml
+
+          echo -e "${C_YELLOW}[INFO] Membuat set-wallpaper.sh (fallback autostart: sinkron output asli + reload)...${C_NC}"
+          sudo tee /usr/local/bin/set-wallpaper.sh > /dev/null <<'SWALL'
+          #!/bin/bash
+          # Fallback autostart: sinkronkan wallpaper dengan output nyata (xrandr)
+          # lalu reload xfdesktop. Config utama sudah tertulis sebagai XML seed.
+          export DISPLAY="${DISPLAY:-:20}"
+          WALL="/home/runner/Pictures/wallpaper.png"
+          sleep 4
+          set_all() {
+            local m="$1"
+            xfconf-query -c xfce4-desktop -p "/backdrop/screen0/${m}/workspace0/last-image" -n -t string -s "$WALL" 2>/dev/null || true
+            xfconf-query -c xfce4-desktop -p "/backdrop/screen0/${m}/workspace0/image-style" -n -t int -s 5 2>/dev/null || true
+            xfconf-query -c xfce4-desktop -p "/backdrop/screen0/${m}/workspace0/image-show" -n -t bool -s true 2>/dev/null || true
+            xfconf-query -c xfce4-desktop -p "/backdrop/screen0/monitor0/image-path" -n -t string -s "$WALL" 2>/dev/null || true
+          }
+          for try in 1 2 3 4 5 6; do
+            OUT=$(xrandr 2>/dev/null | grep " connected" | awk '{print $1}' | head -1)
+            [ -n "$OUT" ] && set_all "$OUT"
+            set_all monitor0
+            if xfconf-query -c xfce4-desktop -p /backdrop/screen0/monitor0/workspace0/last-image 2>/dev/null | grep -q "wallpaper.png"; then
+              pgrep -x xfdesktop >/dev/null 2>&1 && xfdesktop -R 2>/dev/null || true
+              exit 0
+            fi
+            sleep 4
           done
-          sudo -u runner dbus-run-session -- xfconf-query -c xfce4-desktop -p "/backdrop/screen0/monitor0/workspace0/last-image" -s "$WALL" 2>/dev/null || true
+          exit 0
+          SWALL
+          sudo chmod +x /usr/local/bin/set-wallpaper.sh
 
           # Fallback autostart: set ulang wallpaper saat session mulai,
-          # meng-cover kasus config belum tercatat sebelum desktop jalan.
+          # meng-cover kasus XML seed tertimpa oleh penulisan awal xfce4-session.
           sudo -u runner mkdir -p /home/runner/.config/autostart
-          sudo -u runner bash -c 'cat > /home/runner/.config/autostart/set-wallpaper.desktop <<EOF
+          sudo -u runner tee /home/runner/.config/autostart/set-wallpaper.desktop > /dev/null <<'DWAL'
           [Desktop Entry]
           Type=Application
           Name=Set Wallpaper
-          Exec=sh -c "sleep 3; for m in monitor0 monitorDUMMY0 DUMMY0; do xfconf-query -c xfce4-desktop -p /backdrop/screen0/\$m/workspace0/last-image -s file:///home/runner/Pictures/wallpaper.png 2>/dev/null; done"
+          Exec=/usr/local/bin/set-wallpaper.sh
           X-GNOME-Autostart-enabled=true
           Terminal=false
-          EOF'
+          DWAL
 
           echo "------------------------------------------------------------"
           ls -l /home/runner/Pictures/wallpaper.png || true
@@ -877,7 +970,7 @@ jobs:
       # ============================================================
       - name: Verify Installation
         run: |
-          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_NC='\033[0m'
+          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_RED='\033[1;31m'; C_NC='\033[0m'
 
           echo ""
           echo "------------------------------------------------------------"
@@ -940,6 +1033,19 @@ jobs:
 
           echo "::group::[CHECK] Resolution config (Xorg dummy)"
           cat /etc/X11/xorg.conf.d/10-dummy.conf || true
+          echo "::endgroup::"
+
+          echo "::group::[CHECK] Wallpaper config (xfce4-desktop.xml + autostart)"
+          if test -f /home/runner/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml \
+               && grep -q "wallpaper.png" /home/runner/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml; then
+            echo -e "${C_GREEN}[OK] xfce4-desktop.xml berisi last-image wallpaper (path polos).${C_NC}"
+          else
+            echo -e "${C_YELLOW}[WARN] config wallpaper belum tercatat di XML - autostart set-wallpaper akan mencoba lagi saat session start.${C_NC}"
+          fi
+          test -f /usr/local/bin/set-wallpaper.sh || { echo "[FAIL] set-wallpaper.sh missing!"; exit 1; }
+          cat /usr/local/bin/set-wallpaper.sh || true
+          ls -l /home/runner/.config/autostart/set-wallpaper.desktop || true
+          grep "^Exec=" /home/runner/.config/autostart/set-wallpaper.desktop || true
           echo "::endgroup::"
 
           echo "::group::[CHECK] Chrome Remote Desktop service"

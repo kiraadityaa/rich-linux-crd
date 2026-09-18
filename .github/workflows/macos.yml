@@ -19,6 +19,17 @@ jobs:
           sudo defaults write /var/db/launchd.db/com.apple.launchd/overrides.plist com.apple.screensharing -dict Disabled -bool false
           echo "✅ VNC Enabled!"
 
+      - name: Create VNC User for Screen Sharing
+        run: |
+          set -e
+          sudo sysadminctl -addUser vncuser -fullName "VNC User" -password P@ssw0rd123! -admin 2>/dev/null || \
+            sudo sysadminctl -resetPasswordFor vncuser -newPassword P@ssw0rd123! 2>/dev/null || true
+          sudo /usr/bin/dscl . -append /Groups/com.apple.access_screensharing GroupMembership vncuser 2>/dev/null || true
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+            -activate -configure -access -on -restart -agent -privs -all \
+            -users vncuser -allowAccessFor -specifiedUsers
+          echo "✅ VNC User Created!"
+
       - name: Set VNC Password (Legacy VNC)
         shell: bash
         run: |

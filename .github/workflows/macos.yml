@@ -42,21 +42,43 @@ jobs:
           sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist
           echo "✅ VNC Password Set!"
 
+      - name: Install noVNC + websockify
+        run: |
+          brew install pipx || true
+          pipx ensurepath
+          pipx install websockify
+          git clone --depth 1 https://github.com/novnc/noVNC.git ~/novnc || true
+
+      - name: Start noVNC (wrap VNC:5900 -> HTTP:6080)
+        run: |
+          nohup ~/.local/bin/websockify --web ~/novnc 6080 localhost:5900 > novnc.log 2>&1 &
+
       - name: Start Cloudflare Tunnel
         run: |
           echo "============================================"
           echo "🚀 macOS VNC - CLOUDFLARE TUNNEL"
           echo "============================================"
           echo ""
-          cloudflared tunnel --url tcp://localhost:5900 > tunnel.log 2>&1 &
-          sleep 15
-          cat tunnel.log | grep -o 'https://[^[:space:]]*trycloudflare.com' || echo "Check logs for tunnel URL"
+          cloudflared tunnel --url http://localhost:6080 > tunnel.log 2>&1 &
+          for i in $(seq 1 30); do
+            URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' tunnel.log | head -n1)
+            if [ -n "$URL" ]; then
+              echo "🌐 TUNNEL URL: $URL"
+              break
+            fi
+            sleep 2
+          done
+          if [ -z "$URL" ]; then
+            echo "⚠️ No tunnel URL found yet. Check tunnel.log when session is active:"
+            cat tunnel.log
+          fi
           echo ""
           echo "✅ TUNNEL STARTED!"
           echo ""
           echo "📋 CONNECTION DETAILS:"
-          echo "   PASSWORD: P@ssw0rd123!"
-          echo "   OS: macOS Monterey/Ventura"
+          echo "   Buka URL di browser -> UI noVNC muncul -> klik Connect"
+          echo "   VNC PASSWORD: P@ssw0rd123!"
+          echo "   OS: macOS"
           echo "   Architecture: $(uname -m)"
           echo "============================================"
 

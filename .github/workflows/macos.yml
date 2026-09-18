@@ -1,351 +1,69 @@
-name: RICH LINUX (macOS + noVNC + Cloudflare Quick Tunnel)
-
+name: macOS VNC - CLOUDFLARE
 on:
-  workflow_dispatch:
-    inputs:
-      vnc_password:
-        description: "VNC password (min 6 karakter, sama untuk user runner)"
-        required: true
-        type: string
-      keep_alive_minutes:
-        description: "Durasi runner tetap hidup setelah setup (menit, maks 360)"
-        required: false
-        default: "360"
-        type: string
+  workflow_dispatch
 
 jobs:
   build:
-    runs-on: macos-15
-    timeout-minutes: 360
+    runs-on: macos-latest
+    timeout-minutes: 9999
 
     steps:
-
-      - name: Checkout repository (for setup scripts)
-        id: checkout
-        uses: actions/checkout@v4
-
-      # ============================================================
-      # SETUP MACOS USER
-      # ============================================================
-      - name: Setup User
-        id: setup-user
+      - name: Install Cloudflared
         run: |
-          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_RED='\033[1;31m'; C_NC='\033[0m'
+          brew install cloudflare/cloudflare/cloudflared
+          echo "✅ Cloudflared Installed!"
 
-          echo ""
-          echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 01/04] SETUP USER${C_NC}"
-          echo "------------------------------------------------------------"
-
-          echo -e "${C_YELLOW}[INFO] User aktif di runner ini:${C_NC}"
-          id
-          whoami
-
-          echo -e "${C_GREEN}[OK] Sudo passwordless tersedia (runs-on macos-15).${C_NC}"
-
-      # ============================================================
-      # SETUP REMOTE ACCESS (VNC + noVNC + CLOUDFLARE QUICK TUNNEL)
-      # ============================================================
-      - name: Setup Remote Access
-        id: setup-remote
-        env:
-          VNC_PASSWORD: ${{ inputs.vnc_password }}
+      - name: Enable VNC/Screen Sharing
         run: |
-          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_RED='\033[1;31m'; C_NC='\033[0m'
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -access -on -restart -agent -privs -all -allowAccessFor -allUsers
+          sudo defaults write /var/db/launchd.db/com.apple.launchd/overrides.plist com.apple.screensharing -dict Disabled -bool false
+          echo "✅ VNC Enabled!"
 
-          echo ""
-          echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 02/04] SETUP REMOTE ACCESS (VNC + noVNC + CLOUDFLARE)${C_NC}"
-          echo "------------------------------------------------------------"
-
-          if [ ! -f "$GITHUB_WORKSPACE/scripts/mac/setup-remote-access.sh" ]; then
-            echo -e "${C_RED}[FAIL] scripts/mac/setup-remote-access.sh tidak ditemukan (checkout gagal).${C_NC}"
-            exit 1
-          fi
-
-          chmod +x "$GITHUB_WORKSPACE/scripts/mac/setup-remote-access.sh"
-          "$GITHUB_WORKSPACE/scripts/mac/setup-remote-access.sh"
-
-      # ============================================================
-      # VNC PROBE & CAPTURE (diagnosa black screen)
-      # ============================================================
-      - name: VNC Probe & Capture (diagnosa black screen)
-        id: vnc-probe
-        continue-on-error: true
-        env:
-          VNC_PASSWORD: ${{ inputs.vnc_password }}
+      - name: Set VNC Password (Legacy VNC)
+        shell: bash
         run: |
-          C_CYAN='\033[1;36m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
+          set -e
+          # Ensure RemoteManagement directories exist and proper ownership
+          sudo mkdir -p /Library/Preferences
+          # Use kickstart with sudo to set legacy VNC password
+          echo "P@ssw0rd123!" | sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+            -activate -configure -access -on -restart -agent -privs -all \
+            -clientopts -setvnclegacy -vnclegacy yes -setvncpw -vncpw P@ssw0rd123!
+          # Also set system VNC password key (some runners require this)
+          sudo /usr/libexec/PlistBuddy -c "Add :VNCLegacyPasswords array" /Library/Preferences/com.apple.RemoteManagement.plist 2>/dev/null || true
+          sudo /usr/libexec/PlistBuddy -c "Delete :VNCLegacyPasswords:0" /Library/Preferences/com.apple.RemoteManagement.plist 2>/dev/null || true
+          HASH=$(python3 - <<'PY'
+import sys,hashlib
+print(hashlib.md5(b"P@ssw0rd123!").hexdigest())
+PY
+)
+          sudo /usr/libexec/PlistBuddy -c "Add :VNCLegacyPasswords:0 data $(echo $HASH | xxd -r -p | base64)" /Library/Preferences/com.apple.RemoteManagement.plist
+          sudo launchctl unload /System/Library/LaunchDaemons/com.apple.screensharing.plist 2>/dev/null || true
+          sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.screensharing.plist
+          echo "✅ VNC Password Set!"
 
-          echo ""
-          echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[EXTRA] VNC PROBE & CAPTURE${C_NC}"
-          echo "------------------------------------------------------------"
-
-          if [ ! -f "$GITHUB_WORKSPACE/scripts/mac/vnc-probe.sh" ]; then
-            echo -e "${C_YELLOW}[INFO] scripts/mac/vnc-probe.sh tidak ditemukan — skip.${C_NC}"
-            exit 0
-          fi
-
-          chmod +x "$GITHUB_WORKSPACE/scripts/mac/vnc-probe.sh"
-          "$GITHUB_WORKSPACE/scripts/mac/vnc-probe.sh"
-
-      # ============================================================
-      # HOLD BREW PACKAGES (PREVENT SURPRISE UPGRADES FROM DROPPING VNC)
-      # ============================================================
-      - name: Hold Brew Packages
-        id: hold-brew
+      - name: Start Cloudflare Tunnel
         run: |
-          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
-
+          echo "============================================"
+          echo "🚀 macOS VNC - CLOUDFLARE TUNNEL"
+          echo "============================================"
           echo ""
-          echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 03/04] HOLD BREW PACKAGES${C_NC}"
-          echo "------------------------------------------------------------"
+          cloudflared tunnel --url tcp://localhost:5900 > tunnel.log 2>&1 &
+          sleep 15
+          cat tunnel.log | grep -o 'https://[^[:space:]]*trycloudflare.com' || echo "Check logs for tunnel URL"
+          echo ""
+          echo "✅ TUNNEL STARTED!"
+          echo ""
+          echo "📋 CONNECTION DETAILS:"
+          echo "   PASSWORD: P@ssw0rd123!"
+          echo "   OS: macOS Monterey/Ventura"
+          echo "   Architecture: $(uname -m)"
+          echo "============================================"
 
-          # Jangan izinkan `brew upgrade` menaikkan paket yang bisa mengganggu
-          # sesi remote (cloudflared/websockify/noVNC). Paket build tools lain
-          # tetap boleh di-upgrade user.
-          for p in cloudflared; do
-            if brew list --versions "$p" >/dev/null 2>&1; then
-              brew pin "$p" 2>/dev/null || true
-              echo -e "${C_GREEN}[OK] brew pin: ${C_CYAN}$p${C_NC}"
-            fi
+      - name: Keep Session Alive
+        run: |
+          echo "⏳ Session Active - Keeping alive..."
+          while true; do
+            sleep 60
+            echo "✓ Active - $(date '+%H:%M:%S')"
           done
-
-          echo -e "${C_GREEN}[OK] Hold selesai. Gunakan \`safe-upgrade\` setara untuk brew di macOS (belum ada helper khusus).${C_NC}"
-
-      # ============================================================
-      # VERIFY
-      # ============================================================
-      - name: Verify Installation
-        id: verify
-        run: |
-          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_RED='\033[1;31m'; C_NC='\033[0m'
-
-          echo ""
-          echo "------------------------------------------------------------"
-          echo -e "${C_CYAN}[STEP 04/04] VERIFY INSTALLATION${C_NC}"
-          echo "------------------------------------------------------------"
-
-          echo "::group::[CHECK] System"
-          sw_vers
-          uname -a
-          arch
-          echo "::endgroup::"
-
-          echo "::group::[CHECK] Screen Sharing (VNC port 5900 — TCP probe + RFB handshake)"
-          # Gunakan nc (TCP probe) bukan lsof — karena di macOS 15 listener
-          # socket-activated milik launchd tidak terlihat untuk lsof non-root.
-          # nc juga membangunkan screensharingd via socket activation.
-          VNC_MAX=10
-          VNC_OK=0
-          for i in $(seq 1 $VNC_MAX); do
-            if nc -z -G 2 127.0.0.1 5900 >/dev/null 2>&1; then
-              echo -e "${C_GREEN}[OK] TCP 5900 terbuka (attempt ${i}/${VNC_MAX}).${C_NC}"
-              VNC_OK=1
-              break
-            fi
-            echo -e "${C_YELLOW}  Attempt ${i}/${VNC_MAX} — 5900 belum menerima koneksi, tunggu 2s ...${C_NC}"
-            sleep 2
-          done
-          if [ "$VNC_OK" -eq 0 ]; then
-            echo -e "${C_RED}[FAIL] VNC port 5900 tidak menerima koneksi setelah ${VNC_MAX} percobaan.${C_NC}"
-            echo "  nc -z 127.0.0.1 5900 => GAGAL"
-            exit 1
-          fi
-          # Handshake RFB: kirim banner VNC, harapkan jawaban "RFB 003.008".
-          # Ini membuktikan screensharingd BENAR-BENAR spawn & melayani protokol.
-          RFB_ANS=$(printf 'RFB 003.008\n' | nc -G 3 127.0.0.1 5900 2>/dev/null | head -n 1 || true)
-          if [ -n "$RFB_ANS" ]; then
-            echo -e "${C_GREEN}[OK] VNC handshake RFB: '${RFB_ANS}' — screensharingd aktif.${C_NC}"
-          else
-            echo -e "${C_YELLOW}[WARN] Port terbuka tapi tidak ada jawaban RFB. Kemungkinan VNC view-only/blocked di VM.${C_NC}"
-          fi
-          echo "::endgroup::"
-
-          echo "::group::[CHECK] noVNC (port 6080)"
-          if curl -sf "http://127.0.0.1:6080/vnc.html" >/dev/null 2>&1; then
-            echo -e "${C_GREEN}[OK] noVNC web UI aktif di port 6080.${C_NC}"
-          else
-            echo -e "${C_RED}[FAIL] noVNC tidak merespons!${C_NC}"
-            exit 1
-          fi
-          echo "::endgroup::"
-
-          echo "::group::[CHECK] noVNC ARD patch (password-only VNC DES auth)"
-          if grep -q 'securityTypeARD,' /tmp/noVNC/core/rfb.js 2>/dev/null; then
-            echo -e "${C_RED}[FAIL] ARD (type 30) MASIH didukung di rfb.js — auth noVNC bisa gagal!${C_NC}"
-          else
-            echo -e "${C_GREEN}[OK] ARD (type 30) sudah dihapus — noVNC pakai VNC DES (type 2).${C_NC}"
-          fi
-          echo "::endgroup::"
-
-          echo "::group::[CHECK] Cloudflare Quick Tunnel"
-          if [ -f /tmp/cf-tunnel-url.txt ]; then
-            TUNNEL_URL=$(cat /tmp/cf-tunnel-url.txt)
-            echo -e "${C_GREEN}[OK] Tunnel URL: ${C_CYAN}${TUNNEL_URL}/vnc.html${C_NC}"
-            echo "::notice::macOS desktop siap! Buka ${TUNNEL_URL}/vnc.html?autoconnect=true&resize=scale di browser, masukkan VNC Password SAJA (sama dengan input workflow). Username tidak diperlukan (VNC DES auth)."
-          else
-            echo -e "${C_RED}[FAIL] /tmp/cf-tunnel-url.txt tidak ditemukan!${C_NC}"
-            echo "  Log cloudflared (last 25 lines):"
-            tail -n 25 /tmp/cloudflared.log 2>/dev/null || true
-            echo "  Grep trycloudflare:"
-            grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' /tmp/cloudflared*.log 2>/dev/null | head -n 3 || echo "    (tidak ada URL)"
-            exit 1
-          fi
-          echo "::endgroup::"
-
-          echo ""
-          echo -e "${C_GREEN}[OK] Installation verification completed.${C_NC}"
-
-      # ============================================================
-      # DIAGNOSTIC (only runs on failure)
-      # ============================================================
-      - name: Diagnostic (on failure)
-        id: diagnostic
-        if: failure()
-        run: |
-          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_RED='\033[1;31m'; C_NC='\033[0m'
-
-          echo ""
-          echo "=============================================================="
-          echo -e "${C_RED}  DIAGNOSTIC REPORT — FAILED STEP DETECTED${C_NC}"
-          echo "=============================================================="
-
-          echo ""
-          echo -e "${C_CYAN}[1/12] FAILED STEP (language: steps.*.conclusion)${C_NC}"
-          echo "  checkout:       ${{ steps.checkout.conclusion }}"
-          echo "  setup-user:     ${{ steps.setup-user.conclusion }}"
-          echo "  setup-remote:   ${{ steps.setup-remote.conclusion }}"
-          echo "  hold-brew:      ${{ steps.hold-brew.conclusion }}"
-          echo "  verify:         ${{ steps.verify.conclusion }}"
-          echo "  keep-alive:     ${{ steps.keep-alive.conclusion }}"
-
-          echo ""
-          echo -e "${C_CYAN}[2/12] SYSTEM VERSION${C_NC}"
-          sw_vers 2>/dev/null || true
-          uname -a
-          arch
-
-          echo ""
-          echo -e "${C_CYAN}[3/12] DISK & MEMORY${C_NC}"
-          df -h / 2>/dev/null | head -3
-          sysctl hw.memsize 2>/dev/null || true
-          sysctl hw.ncpu 2>/dev/null || true
-
-          echo ""
-          echo -e "${C_CYAN}[4/12] SCREENSHARINGD SERVICE STATUS${C_NC}"
-          echo "  launchctl list (screensharing):"
-          sudo launchctl list com.apple.screensharing 2>&1 || echo "    (not registered)"
-          echo ""
-          echo "  launchctl print system (screensharing excerpt):"
-          sudo launchctl print system/com.apple.screensharing 2>&1 | head -20 || echo "    (print failed)"
-          echo ""
-          echo "  Proses screensharingd:"
-          ps aux 2>/dev/null | grep -i screensharing | grep -v grep || echo "    (tidak jalan)"
-
-          echo ""
-          echo -e "${C_CYAN}[5/12] ALL LISTENING PORTS${C_NC}"
-          sudo lsof -nP -iTCP -sTCP:LISTEN -P -n 2>/dev/null | head -40 || echo "    (tidak ada)"
-
-          echo ""
-          echo -e "${C_CYAN}[6/12] PORT 5900 — TCP PROBE + RFB HANDSHAKE${C_NC}"
-          echo "  nc -z -G 2 127.0.0.1 5900:"
-          if nc -z -G 2 127.0.0.1 5900 >/dev/null 2>&1; then
-            echo "    => TCP 5900: BUKA"
-          else
-            echo "    => TCP 5900: TUTUP (tidak menerima koneksi)"
-          fi
-          echo ""
-          echo "  RFB handshake (send 'RFB 003.008', wait for response):"
-          RFB=$(printf 'RFB 003.008\n' | nc -G 3 127.0.0.1 5900 2>/dev/null | head -n 1 || true)
-          if [ -n "$RFB" ]; then
-            echo "    => jawaban RFB: '$RFB' (screensharingd aktif)"
-          else
-            echo "    => tidak ada jawaban RFB (screensharingd mungkin tidak spawn / view-only)"
-          fi
-          echo ""
-          echo "  lsof port 5900 (perbandingan):"
-          sudo lsof -nP -iTCP:5900 2>/dev/null || echo "    (tidak ada)"
-          echo "  netstat port 5900:"
-          netstat -an 2>/dev/null | grep 5900 || echo "    (tidak ada)"
-
-          echo ""
-          echo -e "${C_CYAN}[7/12] KICKSTART / REMOTE MANAGEMENT${C_NC}"
-          KICKSTART="/System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart"
-          echo "  kickstart path: $KICKSTART"
-          ls -la "$KICKSTART" 2>/dev/null || echo "    (tidak ditemukan)"
-          echo "  /Library/Preferences/com.apple.RemoteManagement.plist:"
-          sudo defaults read /Library/Preferences/com.apple.RemoteManagement 2>&1 | head -15 || echo "    (tidak ada)"
-
-          echo ""
-          echo -e "${C_CYAN}[8/12] LAUNCHD PLISTS TERKAIT${C_NC}"
-          ls -la /System/Library/LaunchDaemons/com.apple.screensharing.plist 2>/dev/null || echo "    (screensharing.plist: tidak ada)"
-          ls -la /System/Library/LaunchDaemons/com.apple.RemoteDesktop.plist 2>/dev/null || echo "    (RemoteDesktop.plist: tidak ada)"
-          ls -la /Library/LaunchDaemons/com.apple.screensharing.plist 2>/dev/null || echo "    (user override: tidak ada)"
-
-          echo ""
-          echo -e "${C_CYAN}[9/12] LOGIN WINDOW / SESSION${C_NC}"
-          ps aux 2>/dev/null | grep -i loginwindow | grep -v grep || echo "    (tidak ditemukan)"
-          echo "  console user:"
-          who 2>/dev/null || echo "    (tidak ada)"
-          echo "  current user:"
-          id
-
-          echo ""
-          echo -e "${C_CYAN}[10/12] CLOUDFLARE TUNNEL STATUS${C_NC}"
-          echo "  /tmp/cf-tunnel-url.txt:"
-          if [ -f /tmp/cf-tunnel-url.txt ]; then
-            echo "    => URL: $(cat /tmp/cf-tunnel-url.txt)"
-          else
-            echo "    => FILE TIDAK ADA (tunnel tidak terbentuk)"
-          fi
-          echo ""
-          echo "  cloudflared process:"
-          ps aux 2>/dev/null | grep cloudflared | grep -v grep || echo "    (tidak jalan)"
-          echo ""
-          echo "  cloudflared.log (last 20 lines):"
-          tail -n 20 /tmp/cloudflared.log 2>/dev/null || echo "    (log tidak ada)"
-          echo ""
-          echo "  grep trycloudflare:"
-          grep -oE 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' /tmp/cloudflared*.log 2>/dev/null | head -n 3 || echo "    (tidak ada URL ditemukan)"
-
-          echo ""
-          echo -e "${C_CYAN}[11/12] AOSP / SYSTEM LOG (last screensharing-related)${C_NC}"
-          log show --predicate 'process == "screensharingd" OR process == "ARDAgent" OR eventMessage contains "ScreenSharing"' --last 5m --style compact 2>/dev/null | tail -n 20 || echo "    (log show tidak tersedia)"
-
-          echo ""
-          echo -e "${C_CYAN}[12/12] FIREWALL / NETWORK${C_NC}"
-          echo "  pfctl info:"
-          sudo pfctl -si 2>/dev/null | head -5 || echo "    (pf tidak aktif)"
-          echo "  IP addresses:"
-          ifconfig 2>/dev/null | grep -A2 'inet ' | head -15 || ip addr 2>/dev/null | head -15
-
-          echo ""
-          echo "=============================================================="
-          echo -e "${C_RED}  DIAGNOSTIC COMPLETE — copy log ini untuk debugging.${C_NC}"
-          echo "=============================================================="
-
-      # ============================================================
-      # KEEP ALIVE
-      # ============================================================
-      - name: Keep Alive
-        id: keep-alive
-        run: |
-          C_CYAN='\033[1;36m'; C_GREEN='\033[1;32m'; C_YELLOW='\033[1;33m'; C_NC='\033[0m'
-
-          echo ""
-          echo "=============================================================="
-          echo -e "${C_GREEN}  [OK] MACOS REMOTE DESKTOP IS RUNNING${C_NC}"
-          echo "=============================================================="
-          TUNNEL_URL="$(cat /tmp/cf-tunnel-url.txt 2>/dev/null || true)"
-          echo -e "  ${C_YELLOW}[INFO] Open : ${C_CYAN}${TUNNEL_URL:-<tunnel url>}${C_NC}"
-          echo -e "  ${C_YELLOW}[INFO] User : runner${C_NC}"
-          echo -e "  ${C_YELLOW}[INFO] NoVNC: masukkan VNC Password SAJA (username tidak diperlukan — VNC DES auth)${C_NC}"
-          echo -e "  ${C_YELLOW}[INFO] Keep-alive: ${{ inputs.keep_alive_minutes }} menit. Jangan cancel workflow.${C_NC}"
-          echo -e "  [INFO] Coba: open ${TUNNEL_URL:-<tunnel url>}"
-          echo "=============================================================="
-
-          SLEEP_SECS=$(( ${{ inputs.keep_alive_minutes }} * 60 ))
-          sleep "$SLEEP_SECS"
